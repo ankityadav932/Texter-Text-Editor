@@ -1,0 +1,74 @@
+
+/* VARIABLES */
+:root {
+	--themeColor : #1cc0f6;
+	--menuPanelBackground : #f6f6f6
+}
+
+/* Container */
+div.texter {
+    box-shadow: 0px 0px 5px 1px lightgray;
+    border-radius: 8px;
+    margin: 0 auto;
+    position: relative;
+	min-width: 200px;
+	height: auto;
+}
+
+
+/* Option menu */
+div.texter > div.texter-option-menu {
+	position: relative;
+	padding: 10px;
+	background-color: var(--menuPanelBackground);
+	width: auto;
+	height: auto;
+	border-radius: 5px 5px 0 0;
+}
+
+div.texter-option-menu > span.first-level-item {
+	padding: 10px 5px 5px;
+	border-radius: 5px;
+	font-size: 25px;
+	margin: 0 2px;
+	text-align: center;
+	cursor: grab;
+}
+
+div.texter-option-menu > span.first-level-item:hover {
+	background-color: #eeeeee;
+}
+
+div.texter-option-menu > span.active {
+	background-color: var(--themeColor) !important;
+	color: #fff !important;	
+}
+
+/* Text editor */
+div.texter > div.texter-text-editor {
+	outline: none;
+	overflow: scroll;
+	padding: 20px;
+	font-size: 20px;
+	font-family: Arial;
+}
+
+
+div.texter > div.texter-text-editor::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+ 
+
+div.texter > div.texter-text-editor::-webkit-scrollbar-thumb {
+  background: #a3a3a3; 
+  border-radius: 10px;
+}
+
+
+div.texter-text-editor > p {
+	margin-block: 1px;
+}
+
+
+

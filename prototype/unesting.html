@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+</head>
+<body>
+<p>
+	<strong>
+		zsldkjalkd
+		<i>
+			adasdad
+			<u>
+				adsdasdas
+					<big id="test">aldalsjdlajlaskd</big>
+				dadadasd
+			</u>
+		</i>
+		jalsjdaskda
+	</strong>
+</p>	
+</body>
+<script>
+let emptyText = '\u200b';
+
+let unNestElements = (node, offset, tagName) => 
+{
+	// Validate node 
+	if (node.nodeType != 3) 
+		return console.error('Non text node has been passed for un-nesting')
+	
+
+	// Get current node child after and before selection range
+	let beforeSelection = document.createTextNode(node.nodeValue.slice(0, offset));
+	let afterSelection = document.createTextNode(node.nodeValue.slice(offset));
+	let beforeSelectionElem = [];
+	let afterSelectionElem = [];
+	
+	let itrNode = node;
+
+	while (itrNode = node.previousSibling) 
+		beforeSelectionElem.shift(itrNode)
+
+	itrNode = node;
+
+	while(itrNode = node.nextSibling) 
+		afterSelectionElem.push(itrNode);
+
+	node.parentElement.setAttribute('target-node', 'true');
+
+
+	// Get first tag node
+	let tagNode = node.parentElement;
+
+	while(tagNode.nodeName != tagName) 
+		tagNode = tagNode.parentElement;
+
+
+	// Clone first tag node 
+	let beforeClone = tagNode.cloneNode(true);
+	let afterClone = tagNode.cloneNode(true);
+
+
+	// Prepare before division node
+	let currNode = beforeClone.querySelector('[target-node]');
+
+	while(currNode.firstChild) 
+		currNode.removeChild(currNode.firstChild);
+
+	for(itrNode in beforeSelectionElem) 
+		currNode.appendChild(itrNode);
+
+	currNode.appendChild(beforeSelection);		
+	currNode.removeAttribute('target-node');
+
+	while(currNode != beforeClone)
+	{
+		while(currNode.nextSibling) 
+			currNode.parentElement.removeChild(currNode.nextSibling);
+		
+		currNode = currNode.parentElement;
+	}
+
+
+	// Prepare after division node
+	currNode = afterClone.querySelector('[target-node]');
+
+	while(currNode.firstChild) 
+		currNode.removeChild(currNode.firstChild);
+
+	currNode.appendChild(afterSelection);
+
+	for(itrNode in afterSelectionElem) 
+		currNode.appendChild(itrNode);
+
+	currNode.removeAttribute('target-node');
+
+	while(currNode != afterClone)
+	{
+		while(currNode.previousSibling) 
+			currNode.parentElement.removeChild(currNode.previousSibling);
+
+		currNode = currNode.parentElement;
+	}	
+
+
+
+	console.log(tagNode);
+	console.log(beforeClone);
+	console.log(afterClone);
+
+	// Replace clones with original element
+	let emptyTextNode = document.createTextNode(emptyText); 
+	let tagNodeParent = tagNode.parentElement;
+
+	tagNodeParent.replaceChild(afterClone, tagNode);
+	tagNodeParent.insertBefore(emptyTextNode, afterClone);
+	tagNodeParent.insertBefore(beforeClone ,emptyTextNode);
+
+
+}	
+
+
+let targetElement = document.querySelector('#test').firstChild;
+let targetOffset = 6;
+
+unNestElements(targetElement, targetOffset, 'U');
+</script>
+</html>

@@ -1,0 +1,54 @@
+<!-- Collapsed Inline Removal -->
+
+<!-- Input -->
+<p>
+    asdas
+    <span style="color:hsl(30, 75%, 60%);">
+        asdasdads
+        <u>asdasdd</u>
+        <i>
+            <u>asdadad</u>
+            <strong>
+                <u>asd|ada</u>
+            </strong>
+        </i>
+    </span>
+</p>
+
+
+<!-- Output -->
+<p>
+    asdas
+    <span style="color:hsl(30, 75%, 60%);">
+        asdasdads
+        <u>asdasdd</u>
+        <i>
+            <u>asdadad</u>
+            <strong>
+                <u>asd</u>
+            </strong>
+        </i>
+    </span>
+    <span style="color:hsl(0, 0%, 0%);">
+        <i>
+            <strong>
+                <u>asdasd</u>
+            </strong>
+        </i>
+    </span>
+    <span style="color:hsl(30, 75%, 60%);">
+        <i>
+            <strong>
+                <u>ada</u>
+            </strong>
+        </i>
+    </span>
+</p>
+
+<!-- 
+=> The approach is 
+
+
+
+
+ -->

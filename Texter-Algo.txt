@@ -1,0 +1,17 @@
+===================
+	TEXTER ALGO	
+===================
+
+This file contians th algorithmic approach 
+for building Texter (Text Editor)
+---------------------------------------------
+
+--- STEPS ---
+=============
+
+=>  To make Content-Editable div use <p> tag as deafault new line feature  
+
+=>  To make sure all acitve features are being updated according to the caret position 
+
+=>  To make sure that all 
+		
