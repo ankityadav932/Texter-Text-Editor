@@ -11,11 +11,15 @@ class Texter
 	static #emptyText = '\u200b';
 	static #emptyHTML = '&#8203;';
 
+	// Debug mode
+	#debugMode = true;
+
 	// Texter properties
 	#texterContainer = null;
 	#texterMenu = null;
 	#texterEditor = null;
-	#texterActiveFeatures = [];
+	#texterActiveInlineFeatures = [];
+	#texterActiveNewlineFeature = null;
 
 
 	// Last selection param
@@ -160,7 +164,6 @@ class Texter
 	}
 
 
-
 	/**
 	 * @function : getLastRange
 	 * @purpose : To get the last selection range 
@@ -287,8 +290,9 @@ class Texter
 
 			this.#texterEditor.addEventListener(evtName, evt => {
 
+
 				// Set <p> as default new line tag
-				this.setParagraphAsDefault(evt);
+				this.setParagraphAsDefault(evt);	
 
 				
 				// Get current selection and range 
@@ -298,19 +302,21 @@ class Texter
 	
 				let currentRange = currentSelection.getRangeAt(0);
 
+				if (this.#texterEditor == currentRange.commonAncestorContainer || this.#texterEditor.contains(currentRange.commonAncestorContainer)) 
+				{
+					// Set Last range params
+					this.#lastSelection = {
+						startContainer : currentRange.startContainer,
+						endContainer : currentRange.endContainer,
+						startOffset : currentRange.startOffset,
+						endOffset : currentRange.endOffset,
+						collapsed : currentRange.collapsed
+					};
 
-				// Set Last range params
-				this.#lastSelection = {
-					startContainer : currentRange.startContainer,
-					endContainer : currentRange.endContainer,
-					startOffset : currentRange.startOffset,
-					endOffset : currentRange.endOffset,
-					collapsed : currentRange.collapsed
-				};
 
-
-				// Set Active features
-				this.setActiveFeatures();
+					// Set Active features
+					this.setActiveFeatures();
+				}
 			});
 		});
 
@@ -483,7 +489,6 @@ class Texter
 		// Prepare after division node		
 		currNode = (afterClone.hasAttribute('target-node')) ? afterClone : afterClone.querySelector('[target-node]');
 
-		console.log(currNode);
 		while(currNode.firstChild) 
 			currNode.removeChild(currNode.firstChild);
 
@@ -681,8 +686,6 @@ class Texter
 					currElement = beginParentNode.nextSibling; 
 					while(currElement != endParentNode)
 					{	
-						console.log(currElement);
-
 						if (currElement.nodeType == 1) 
 						{
 							let currElemType = this.getElementType(currElement);
@@ -846,11 +849,11 @@ class Texter
 
 
 	/** 
-	 * @function : removeTag
+	 * @function : removeInlineTag
 	 * @purpose : To remove a certain tag from selection range
 	 * =========================================================*/
 
-	removeTag = (elementTag) => 
+	removeInlineTag = (elementTag) => 
 	{
 		let lastSelectionRange = this.getLastRange();		
 
@@ -860,14 +863,13 @@ class Texter
 			let currOffset = lastSelectionRange.startOffset;
 
 			let unNestObj = this.unNestElements(currNode, currOffset, elementTag);
-			console.log('Ignore');
 			let focusNode = unNestObj.focusNode;
 			let focusNodeParent = focusNode.parentElement;
 			let focusNodeNextSibling = focusNode.nextSibling;
 
 
 			let itrChildNode = focusNode
-			for(let feature of texter.#texterActiveFeatures)
+			for(let feature of this.#texterActiveInlineFeatures)
 			{
 				if (feature.featureType == this.#textEditorConfig.featureType.inlineFeature) 
 				{
@@ -910,7 +912,7 @@ class Texter
 		let targetFeature = null;
 
 
-		for(let itrFeature of this.#texterActiveFeatures)
+		for(let itrFeature of this.#texterActiveInlineFeatures)
 		{
 			if (itrFeature.featureName == feature)
 			{
@@ -964,12 +966,12 @@ class Texter
 
 	deActivateFeature = (feature) => 
 	{
-		console.log('Feature deactivated')
+		console.log('Feature deactivated');
 
 		switch (feature.type)
 		{
 			case this.#textEditorConfig.featureType.inlineFeature:
-				this.removeTag(feature.name);
+				this.removeInlineTag(feature.name);
 			break;
 
 			case this.#textEditorConfig.featureType.newLineFeature:
@@ -994,10 +996,9 @@ class Texter
 	{
 		let lastSelectionRange = this.getLastRange();
 
-		if (!lastSelectionRange) return console.info('Editor not in focus');
+		if (!lastSelectionRange) return console.log('Editor not in focus');
 
-		this.#texterActiveFeatures = [];
-
+		this.#texterActiveInlineFeatures = [];
 
 		this.#texterMenu.querySelectorAll('.first-level-item').forEach(elem => elem.classList.remove('active'));
 
@@ -1017,7 +1018,7 @@ class Texter
 			}
 
 
-			for (let feature in this.#texterActiveFeatures) classSelectorStr += `.${this.#texterActiveFeatures[feature].featureName}-btn, `; 
+			for (let feature in this.#texterActiveInlineFeatures) classSelectorStr += `.${this.#texterActiveInlineFeatures[feature].featureName}-btn, `; 
 
 			classSelectorStr = classSelectorStr.trim();	
 			classSelectorStr = classSelectorStr.slice(0, -1);
@@ -1027,7 +1028,7 @@ class Texter
 		else
 		{
 			let rangeElements = lastSelectionRange.cloneContents();
-			this.#texterActiveFeatures = [];
+			this.#texterActiveInlineFeatures = [];
 
 
 			// Get start container parents till main block element
@@ -1053,7 +1054,6 @@ class Texter
 
 			while(currNode != mainBlockNode)
 			{	
-				console.log(currNode);
 				if (currNode.nodeType == 1) 
 					this.setActiceFeatureByElement(currNode);
 
@@ -1084,9 +1084,9 @@ class Texter
 
 		for(let feature in this.#textEditorFeatures)
 		{
-			if (this.#textEditorFeatures[feature].name == element.nodeName && !this.#texterActiveFeatures.find(activeFeature => activeFeature.nodeName == element.nodeName)) 
+			if (this.#textEditorFeatures[feature].name == element.nodeName && !this.#texterActiveInlineFeatures.find(activeFeature => activeFeature.nodeName == element.nodeName)) 
 			{
-				this.#texterActiveFeatures.push({
+				this.#texterActiveInlineFeatures.push({
 					featureName : feature,
 					nodeName : element.nodeName,
 					featureType : this.#textEditorFeatures[feature].type
@@ -1114,9 +1114,9 @@ class Texter
 			for(let feature in this.#textEditorFeatures)
 			{
 				if (this.#textEditorFeatures[feature].name == element.nodeName && 
-					!this.#texterActiveFeatures.find(activeFeature => activeFeature.nodeName == element.nodeName)) 
+					!this.#texterActiveInlineFeatures.find(activeFeature => activeFeature.nodeName == element.nodeName)) 
 				{
-					this.#texterActiveFeatures.push({
+					this.#texterActiveInlineFeatures.push({
 						featureName : feature,
 						nodeName : element.nodeName,
 						featureType : this.#textEditorFeatures[feature].type

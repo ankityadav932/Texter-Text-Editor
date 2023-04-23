@@ -1,0 +1,91 @@
+asdasdasd<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+</head>
+<body>
+<div>
+	
+<p id="target">
+	<strong>
+		abcd
+		<i>
+			efgh
+			<u>
+				ijkl
+					<strong>
+						mnop
+						<big>
+							zsdzsdzs
+							<strong>
+								qrst
+							</strong>
+						</big>
+						uvw
+					</strong>
+				xyz
+			</u>
+			123
+			<!-- <u>
+				
+			<strong>
+				dadasd
+					<i>
+						aslkdja
+						<big>alsdjals</big>
+						ldjasd
+					</i>
+				asdada
+			</strong>
+			</u> -->
+		</i>
+		456
+	</strong>
+</p>
+</div>	
+<script type="application/javascript">
+
+// let removeDuplicateTags = (element, tagObj = {}) => 
+// {
+// 	if (element.nodeType == 1) 
+// 	{
+// 		if (element.nodeName in tagObj) 
+// 			tagObj[element.nodeName]++;
+// 		else
+// 			tagObj[element.nodeName] = 1;
+
+// 		if (element.childNodes.length)
+// 			for (let child of element.childNodes) 
+// 				removeDuplicateTags(child, tagObj);
+
+// 		if (element.nodeName in tagObj && tagObj[element.nodeName] > 1) 
+// 		{
+// 			let parent = element.parentElement;
+
+// 			while(element.firstChild)
+// 			{
+// 				parent.insertBefore(element.firstChild, element);
+// 				console.log(element.parentElement);
+// 			}
+
+// 			parent.removeChild(element);
+// 			tagObj[element.nodeName]--;	
+// 			// console.log(document.querySelector('#target'));
+// 			console.log("|||================================================================");
+// 		}
+		 
+// 	}
+// }
+
+let targetElement = document.querySelector('#target');
+let parent
+
+while(targetElement.firstChild)
+	targetElement.parentElement.insertBefore(targetElement.firstChild, targetElement);
+
+trasdasd
+</script>
+</body>
+</html>
