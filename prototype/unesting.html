@@ -7,7 +7,7 @@
 </head>
 <body>
 <p>
-	<strong>
+	<strong id="target">
 		zsldkjalkd
 		<i>
 			adasdad
@@ -24,27 +24,27 @@
 <script>
 let emptyText = '\u200b';
 
-let unNestElements = (node, offset, tagName) => 
+let unNestElements = (node, offset, tagName, targetElement = null) => 
 {
 	// Validate node 
 	if (node.nodeType != 3) 
 		return console.error('Non text node has been passed for un-nesting')
 	
-
 	// Get current node child after and before selection range
 	let beforeSelection = document.createTextNode(node.nodeValue.slice(0, offset));
 	let afterSelection = document.createTextNode(node.nodeValue.slice(offset));
+	let remainingNodeArray = [];
 	let beforeSelectionElem = [];
 	let afterSelectionElem = [];
 	
 	let itrNode = node;
 
-	while (itrNode = node.previousSibling) 
-		beforeSelectionElem.shift(itrNode)
+	while (itrNode = itrNode.previousSibling) 
+		beforeSelectionElem.unshift(itrNode)
 
 	itrNode = node;
 
-	while(itrNode = node.nextSibling) 
+	while(itrNode = itrNode.nextSibling) 
 		afterSelectionElem.push(itrNode);
 
 	node.parentElement.setAttribute('target-node', 'true');
@@ -52,10 +52,25 @@ let unNestElements = (node, offset, tagName) =>
 
 	// Get first tag node
 	let tagNode = node.parentElement;
+	remainingNodeArray.push(tagNode.nodeName.toUpperCase());
 
-	while(tagNode.nodeName != tagName) 
-		tagNode = tagNode.parentElement;
-
+	if (tagName) 
+	{
+		while(tagNode.nodeName != tagName)
+		{
+			tagNode = tagNode.parentElement;
+			remainingNodeArray.push(tagNode.nodeName.toUpperCase());
+		} 
+	}
+	else if (targetElement)
+	{
+		while(tagNode != targetElement)
+		{
+			tagNode = tagNode.parentElement;
+			remainingNodeArray.push(tagNode.nodeName.toUpperCase());
+		} 		
+	}
+	else return console.log('Either tagName or targetElement is required for un-nesting HTML elements');
 
 	// Clone first tag node 
 	let beforeClone = tagNode.cloneNode(true);
@@ -63,12 +78,12 @@ let unNestElements = (node, offset, tagName) =>
 
 
 	// Prepare before division node
-	let currNode = beforeClone.querySelector('[target-node]');
+	let currNode = (beforeClone.hasAttribute('target-node')) ? beforeClone : beforeClone.querySelector('[target-node]');
 
 	while(currNode.firstChild) 
 		currNode.removeChild(currNode.firstChild);
 
-	for(itrNode in beforeSelectionElem) 
+	for(itrNode of beforeSelectionElem) 
 		currNode.appendChild(itrNode);
 
 	currNode.appendChild(beforeSelection);		
@@ -83,15 +98,15 @@ let unNestElements = (node, offset, tagName) =>
 	}
 
 
-	// Prepare after division node
-	currNode = afterClone.querySelector('[target-node]');
+	// Prepare after division node		
+	currNode = (afterClone.hasAttribute('target-node')) ? afterClone : afterClone.querySelector('[target-node]');
 
 	while(currNode.firstChild) 
 		currNode.removeChild(currNode.firstChild);
 
 	currNode.appendChild(afterSelection);
 
-	for(itrNode in afterSelectionElem) 
+	for(itrNode of afterSelectionElem) 
 		currNode.appendChild(itrNode);
 
 	currNode.removeAttribute('target-node');
@@ -105,26 +120,32 @@ let unNestElements = (node, offset, tagName) =>
 	}	
 
 
-
-	console.log(tagNode);
-	console.log(beforeClone);
-	console.log(afterClone);
-
 	// Replace clones with original element
 	let emptyTextNode = document.createTextNode(emptyText); 
 	let tagNodeParent = tagNode.parentElement;
 
-	tagNodeParent.replaceChild(afterClone, tagNode);
-	tagNodeParent.insertBefore(emptyTextNode, afterClone);
-	tagNodeParent.insertBefore(beforeClone ,emptyTextNode);
+	if (afterClone.innerText && afterClone.innerText.length) 
+	{
+		tagNodeParent.replaceChild(afterClone, tagNode);
+		tagNodeParent.insertBefore(emptyTextNode, afterClone);
+	}
+	else
+		tagNodeParent.replaceChild(emptyTextNode, tagNode);
+	
+	if (beforeClone.innerText && beforeClone.innerText.length) tagNodeParent.insertBefore(beforeClone ,emptyTextNode);
 
 
+	return {
+		focusNode : emptyTextNode,
+		nodeArray : remainingNodeArray                                                                
+	}
 }	
 
 
 let targetElement = document.querySelector('#test').firstChild;
+let mainTargetElement = document.querySelector('#target');
 let targetOffset = 6;
 
-unNestElements(targetElement, targetOffset, 'U');
+unNestElements(targetElement, targetOffset, null, mainTargetElement);
 </script>
 </html>

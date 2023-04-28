@@ -1,4 +1,4 @@
-asdasdasd<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
@@ -7,85 +7,69 @@ asdasdasd<!DOCTYPE html>
 </head>
 <body>
 <div>
-	
-<p id="target">
-	<strong>
-		abcd
-		<i>
-			efgh
-			<u>
-				ijkl
+	<p>
+		<u>
+			abcd
+			<strong id="target">
+				efgh
+				<i>
+					ijkl
 					<strong>
 						mnop
 						<big>
-							zsdzsdzs
 							<strong>
 								qrst
 							</strong>
 						</big>
-						uvw
 					</strong>
-				xyz
-			</u>
-			123
-			<!-- <u>
-				
-			<strong>
-				dadasd
-					<i>
-						aslkdja
-						<big>alsdjals</big>
-						ldjasd
-					</i>
-				asdada
+				</i>
+				uvwx
 			</strong>
-			</u> -->
-		</i>
-		456
-	</strong>
-</p>
+			yz
+		</u>	
+	</p>
 </div>	
 <script type="application/javascript">
 
-// let removeDuplicateTags = (element, tagObj = {}) => 
-// {
-// 	if (element.nodeType == 1) 
-// 	{
-// 		if (element.nodeName in tagObj) 
-// 			tagObj[element.nodeName]++;
-// 		else
-// 			tagObj[element.nodeName] = 1;
+let removeDuplicateTags = (element, tagObj = {}) => 
+{
+	if (element.nodeType == 1) 
+	{
+		let nodeName = element.nodeName;
 
-// 		if (element.childNodes.length)
-// 			for (let child of element.childNodes) 
-// 				removeDuplicateTags(child, tagObj);
+		if (nodeName in tagObj) 
+			tagObj[nodeName]++;
+		else
+			tagObj[nodeName] = 1;
 
-// 		if (element.nodeName in tagObj && tagObj[element.nodeName] > 1) 
-// 		{
-// 			let parent = element.parentElement;
 
-// 			while(element.firstChild)
-// 			{
-// 				parent.insertBefore(element.firstChild, element);
-// 				console.log(element.parentElement);
-// 			}
+		if (element.childNodes.length)
+			for (let child of element.childNodes) 
+				removeDuplicateTags(child, tagObj);
 
-// 			parent.removeChild(element);
-// 			tagObj[element.nodeName]--;	
-// 			// console.log(document.querySelector('#target'));
-// 			console.log("|||================================================================");
-// 		}
+
+		if (nodeName in tagObj && tagObj[nodeName] > 1) 
+		{
+			let parent = element.parentElement;
+
+			while(element.firstChild)
+				parent.insertBefore(element.firstChild, element);
+
+			parent.removeChild(element);
+		}
 		 
-// 	}
-// }
+		tagObj[nodeName]--;	
+	}
+}
 
 let targetElement = document.querySelector('#target');
-let parent
+let tagObj = {};
 
-while(targetElement.firstChild)
-	targetElement.parentElement.insertBefore(targetElement.firstChild, targetElement);
+removeDuplicateTags(targetElement, tagObj);
 
-trasdasd
+
+console.log('Final Tag Object');
+console.log(tagObj);
 </script>
 </body>
 </html>

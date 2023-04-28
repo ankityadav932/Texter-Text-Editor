@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>HTML - Tag remover</title>
+</head>
+<body>
+<p id="target">
+	<strong>
+		abcd
+		<i>
+			efg
+			<u>
+				hijk
+				<strong>
+					lmno
+					<big>
+						pqr
+						<strong>
+							stu
+						</strong>
+					</big>
+				</strong>
+				vwx
+			</u>
+		</i>
+		yz
+	</strong>	
+</p>
+<script type="application/javascript">
+
+let nodeTreeTagRemover = (element, tagName) => 
+{	
+	if (element.nodeType == 1) 
+	{
+		if (element.childNodes.length)
+			for (let child of element.childNodes) 
+				nodeTreeTagRemover(child, tagName);
+
+
+		let nodeName = element.nodeName;
+
+		if (tagName == element.nodeName) 
+		{
+			let parent = element.parentElement;
+
+			while(element.firstChild)
+				parent.insertBefore(element.firstChild, element);
+
+			parent.removeChild(element);
+		}
+	}
+}
+
+
+let targetElement = document.querySelector('p#target');
+let targetTag = 'STRONG';
+
+nodeTreeTagRemover(targetElement, targetTag);
+	
+</script>	
+</body>
+</html>

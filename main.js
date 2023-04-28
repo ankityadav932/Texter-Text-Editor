@@ -36,6 +36,10 @@ class Texter
 		featureType : {
 			inlineFeature : 1,
 			newLineFeature : 2
+		},
+		elementType : {
+			inline : 1,
+			block : 2
 		}
 	};
 
@@ -393,7 +397,6 @@ class Texter
 
 			let p = document.createElement('p');
 			p.appendChild(document.createElement('br'));
-			// p.id = randomStr;
 
 			let newDiv = (currentRange.startContainer.nodeName == 'DIV') ? currentRange.startContainer : null;
 
@@ -403,9 +406,6 @@ class Texter
 			let newDivIndex = newDiv.childElementCount;
 			this.#texterEditor.replaceChild(p, newDiv);
 
-
-			// p = this.#texterEditor.querySelector(`#${randomStr}`);
-			// p.removeAttribute('id');
 
 			let newRange = document.createRange();
 			newRange.setStart(p.firstChild, 0);
@@ -424,7 +424,7 @@ class Texter
 	 * position of collapsed selection range(Caret position)
 	 * =======================================================*/
 
-	unNestElements = (node, offset, tagName) => 
+	unNestElements = (node, offset, tagName, targetElement) => 
 	{
 		// Validate node 
 		if (node.nodeType != 3) 
@@ -454,11 +454,24 @@ class Texter
 		let tagNode = node.parentElement;
 		remainingNodeArray.push(tagNode.nodeName.toUpperCase());
 
-		while(tagNode.nodeName != tagName)
+		if (tagName) 
 		{
-			tagNode = tagNode.parentElement;
-			remainingNodeArray.push(tagNode.nodeName.toUpperCase());
-		} 
+			while(tagNode.nodeName != tagName)
+			{
+				tagNode = tagNode.parentElement;
+				remainingNodeArray.push(tagNode.nodeName.toUpperCase());
+			} 
+		}
+		else if (targetElement)
+		{
+			while(tagNode != targetElement)
+			{
+				tagNode = tagNode.parentElement;
+				remainingNodeArray.push(tagNode.nodeName.toUpperCase());
+			} 		
+		}
+		else return console.error('Either tagName or targetElement is required for un-nesting HTML elements');
+
 
 		// Clone first tag node 
 		let beforeClone = tagNode.cloneNode(true);
@@ -530,6 +543,46 @@ class Texter
 
 	}
 
+
+	/**
+	 * @function : removeDuplicateTags
+	 * @todo : To remove all duplicates HTML element in 
+	 * a given HTML element
+	 * ================================================*/
+
+	removeDuplicateTags = (element, tagObj = {}) =>
+	{
+		if (element.nodeType == 1) 
+		{
+			let nodeName = element.nodeName;
+
+			if (nodeName in tagObj) 
+				tagObj[nodeName]++;
+			else
+				tagObj[nodeName] = 1;
+
+
+			if (element.childNodes.length)
+				for (let child of element.childNodes) 
+					this.removeDuplicateTags(child, tagObj);
+
+
+			if (nodeName in tagObj && tagObj[nodeName] > 1) 
+			{
+				let parent = element.parentElement;
+
+				while(element.firstChild)
+					parent.insertBefore(element.firstChild, element);
+
+				parent.removeChild(element);
+			}
+			 
+			tagObj[nodeName]--;	
+		}
+	}
+
+
+
 	/**
 	 * @function : insertInlineTag
 	 * @purpose : To insert an HTML element according
@@ -550,17 +603,19 @@ class Texter
 			// Get data 
 			let newElement = document.createElement(elementTag);
 			let currNode = lastSelectionRange.startContainer;
-			let currParent = currNode.parentElement;
+			let currParent = (currNode.nodeType == 1) ? currNode : currNode.parentElement;
+			let mainBlockNode = this.mainElement(currParent);
 
 			
 			// Prepare tag to be inserted
 			newElement.appendChild(document.createTextNode(Texter.#emptyText));
 
 
-			// Check if curr node is empty or not
-			if (typeof lastSelectionRange.startContainer.nodeValue == 'string' &&
-				lastSelectionRange.startContainer.nodeValue && 
-				lastSelectionRange.startContainer.nodeValue != '\n\t')  
+			// Handle non-empty element
+			if (typeof currNode.nodeValue == 'string' &&
+				currNode.nodeValue &&
+				currNode.nodeType == 3 && 
+				currNode.nodeValue != '\n\t')  
 			{
 				let beforeSelection = document.createTextNode(currNode.nodeValue.slice(0, lastSelectionRange.startOffset));
 				let afterSelection = document.createTextNode(currNode.nodeValue.slice(lastSelectionRange.startOffset));
@@ -571,13 +626,19 @@ class Texter
 					currParent.insertBefore(afterSelection, currNode.nextSibling);
 				else
 					currParent.appendChild(afterSelection);
+			}
 
-				currParent.replaceChild(newElement ,currNode);
+
+			// Insert Tag
+			if (currParent == mainBlockNode) 
+			{
+				if (currParent.childNodes.length) 
+					while(currParent.firstChild && currParent.firstChild.nodeType == 1) currParent.removeChild(currParent.firstChild);
+
+				currParent.appendChild(newElement);
 			}
 			else
-			{
-				currParent.replaceChild(newElement ,currNode);
-			}
+				currParent.replaceChild(newElement, currNode);
 
 
 			// Set the selection back to last range
@@ -740,29 +801,62 @@ class Texter
 
 
 	/**
-	 * @function : mainBlockElement 
-	 * @purpose : Returns the main block level element
-	 * for its child element
+	 * @function : mainElement 
+	 * @purpose : Returns the main block or inline level 
+	 * ancestor element for its child element
 	 * =====================================================*/
  
-	mainBlockElement = (element) =>
+	mainElement = (element, type) =>
 	{
 		if (element.nodeType != 1) return console.error('Only a HTML Element node is accepted as parameter');
 		
 		let mainParent = this.#texterEditor;
 		let currNode = element;
 
-		while(currNode)
+		if (type == this.#textEditorConfig.elementType.block) 
 		{
-			let currNodeElementType = this.getElementType(currNode);
+			while(currNode)
+			{
+				let currNodeElementType = this.getElementType(currNode);
 
-			if (currNodeElementType == 'block' && currNode.parentElement == mainParent) return currNode;
+				if (currNode == mainParent) 
+				{
+					console.log('No block ancestor element found. Please report this issue');
+					return null;
+				}
 
-			currNode = currNode.parentElement;
+				if (currNodeElementType == 'block' && currNode.parentElement == mainParent)
+						return currNode; 
+
+				currNode = currNode.parentElement;
+			}
 		}
+		else if (type == this.#textEditorConfig.elementType.inline)
+		{
+			while(currNode)
+			{
+				let currNodeElementType = this.getElementType(currNode);
+				let currParentElementType = this.getElementType(currNode.parentElement);
 
-		return false;
+				if (currNode == mainParent) 
+				{
+					console.log('No block ancestor element found. Please report this issue');
+					return null;
+				}
+
+				if (currNodeElementType == 'inline' && currParentElementType != 'inline')
+						return currNode; 
+
+				currNode = currNode.parentElement;
+			}
+		}
+		else
+		{
+			console.error('Exceptional value sent in type argument');
+			return false;
+		} 
 	}
+
 
 
 	/**
@@ -812,37 +906,31 @@ class Texter
 
 
 	/**
-	 * @function : nodeTreeTagInserter
-	 * @purpose : Insert an HTML element around every non-empty
+	 * @function : nodeTreeTagRemover
+	 * @purpose : Remove an HTML element around every non-empty
 	 * text node in the given element
 	 * =========================================================*/
 
-	nodeTreeTagInserter = (element, tagName) => 
+	nodeTreeTagRemover = (element, tagName) => 
 	{	
-		if (element.nodeType == 1 && element.childNodes.length)
+		if (element.nodeType == 1) 
 		{
-			for (let child of element.childNodes)
+			if (element.childNodes.length)
+				for (let child of element.childNodes) 
+					this.nodeTreeTagRemover(child, tagName);
+
+
+			let nodeName = element.nodeName;
+
+			if (tagName == element.nodeName) 
 			{
-				if (child.nodeType == 3 && child.nodeValue.trim()) 
-				{
-					let newNode = document.createElement(tagName);
-					let childClone = child;
-					child.parentElement.replaceChild(newNode, child);
-					newNode.appendChild(childClone);
-				}
-				else if (child.nodeType == 1 && child.nodeName != tagName) this.nodeTreeTagInserter(child, tagName);
+				let parent = element.parentElement;
+
+				while(element.firstChild)
+					parent.insertBefore(element.firstChild, element);
+
+				parent.removeChild(element);
 			}
-		}
-		else
-		{
-			if (element.nodeType == 3 && element.nodeValue.trim()) 
-			{
-				let newNode = document.createElement(tagName);
-				let elemClone = element;
-				element.parentElement.replaceChild(newNode, element);
-				newNode.appendChild(elemClone);
-			}
-			else if (element.nodeType == 1) element.parentElement.removeChild(element);			
 		}
 	}
 
@@ -862,7 +950,7 @@ class Texter
 			let currNode = lastSelectionRange.startContainer;
 			let currOffset = lastSelectionRange.startOffset;
 
-			let unNestObj = this.unNestElements(currNode, currOffset, elementTag);
+			let unNestObj = this.unNestElements(currNode, currOffset, elementTag, null);
 			let focusNode = unNestObj.focusNode;
 			let focusNodeParent = focusNode.parentElement;
 			let focusNodeNextSibling = focusNode.nextSibling;
@@ -892,11 +980,84 @@ class Texter
 		}
 		else
 		{
-			console.log('Non collapsed range - Tag remove');
+			if (lastSelectionRange.startContainer == lastSelectionRange.endContainer) 
+			{
+				console.log('Same element tag removal - To be developed');
+			}
+			else
+			{
+				// Get required data
+				let commonParent = lastSelectionRange.commonAncestorContainer;
+
+
+				// Un-nest and remove tags from begining node
+				let currNode = lastSelectionRange.startContainer;
+				let currOffset = lastSelectionRange.startOffset;
+				let currParent = (currNode.nodeType == 1) ? currNode : currNode.parentElement;
+
+				let mainInlineNode = this.mainElement(currParent, this.#textEditorConfig.elementType.inline);
+				console.dir(mainInlineNode.cloneNode(true));
+				let unNestObj = this.unNestElements(currNode, currOffset, null, mainInlineNode);
+
+				let beginParentNode = unNestObj.focusNode.nextSibling;
+				while(beginParentNode.parentElement != commonParent)
+				{
+					let currNode = beginParentNode;
+					beginParentNode = beginParentNode.parentElement;
+
+					while(currNode)
+					{	
+						let tempNode = currNode;
+						currNode = currNode.nextSibling;
+						this.nodeTreeTagRemover(tempNode, elementTag);
+					}
+				}
+
+
+				// Un-nest and remove tags from end node
+				currNode = lastSelectionRange.endContainer;
+				currOffset = lastSelectionRange.endOffset;
+				currParent = (currNode.nodeType == 1) ? currNode : currNode.parentElement;
+
+				mainInlineNode = this.mainElement(currParent, this.#textEditorConfig.elementType.inline);
+				console.log(mainInlineNode);
+				unNestObj = this.unNestElements(currNode, currOffset, null, mainInlineNode);
+
+				let endParentNode = unNestObj.focusNode.previousSibling;
+				while(endParentNode.parentElement != commonParent)
+				{
+					let currNode = endParentNode;
+					endParentNode = endParentNode.parentElement;
+
+					while(currNode)
+					{	
+						let tempNode = currNode;
+						currNode = currNode.previousSibling;
+						this.nodeTreeTagRemover(tempNode, elementTag);
+					}
+				}
+
+
+				// Remove tags from the elements between startingParentNode and endParentNode
+				currNode = beginParentNode.nextSibling;
+
+				if (currNode != endParentNode) 
+				{
+					while(currNode != endParentNode)
+					{
+						let tempNode = currNode;
+						currNode = currNode.nextSibling;
+
+						if (tempNode.nodeType == 1)
+							if (tempNode.childNodes.length)
+								for(let tempChild of tempNode.childNodes)
+									if (tempChild.nodeType == 1)
+										this.nodeTreeTagRemover(tempChild, elementTag);
+					}
+				}
+			}
 		}
 	}	
-
-
 
 
 
@@ -910,6 +1071,8 @@ class Texter
 	changeFeatureState = (feature) => 
 	{
 		let targetFeature = null;
+
+		if (!this.#lastSelection) return console.error('Editor was not in focus. No selection found');
 
 
 		for(let itrFeature of this.#texterActiveInlineFeatures)
@@ -1033,7 +1196,7 @@ class Texter
 
 			// Get start container parents till main block element
 			let currNode = lastSelectionRange.startContainer.parentElement;			
-			let mainBlockNode = this.mainBlockElement(currNode);
+			let mainBlockNode = this.mainElement(currNode, this.#textEditorConfig.elementType.block);
 
 			if (currNode instanceof Node == false) return;
 
@@ -1048,7 +1211,7 @@ class Texter
 
 			// Get end container parents till main block element
 			currNode = lastSelectionRange.endContainer.parentElement;			
-			mainBlockNode = this.mainBlockElement(currNode);
+			mainBlockNode = this.mainElement(currNode, this.#textEditorConfig.elementType.block);
 
 			if (currNode instanceof Node == false) return;
 
@@ -1175,8 +1338,8 @@ HTMLElement.prototype.texter = function (userConfig)
 
 
 let testHTML = `
-	<p>aldaljd<u>sldkajsdla<i>sdljasdjal<big>lkdjaldjalksdjlaksjdlka</big>ksdjalsjdlad</i>jlsdjalsjda</u>lfjslfjsldkfjslkdjflksfsdf</p>
-	<p>sldjasljdalsjdlasjdlasjdla<i>asdhaskdhakjshdahsdla<u>aslkdjasldjalksjdlkasjdlajdlkasjlkdjaslkd</u></i></p>
+	<p><strong>aldaljd<u>sldkajsdla<i>sdljasdjal<big>lkdjaldjalksdjlaksjdlka</big>ksdjalsadasdsjdlad</i>jlsdjalsjda</u>lfjslfjsldkfjslkdjflksfsdf</strong></p>
+	<p>sl<strong>djasl<strong>sdfsdf</strong>jdalsjdlasjdlasjdla<i>asdhaskdhakjshdahsdla<u>aslkdjasldjalksjdlkasjdlajdlkasjlkdjaslkd</u></i></strong></p>
 	<p>aslkdjalsjdal<i>lasjdalsjdlakjdlasdlkasjdlajdlkassdasdasdasdas</i></p>
 	<ul>
 		<li>saldkj</li>
