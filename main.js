@@ -604,7 +604,7 @@ class Texter
 			let newElement = document.createElement(elementTag);
 			let currNode = lastSelectionRange.startContainer;
 			let currParent = (currNode.nodeType == 1) ? currNode : currNode.parentElement;
-			let mainBlockNode = this.mainElement(currParent);
+			let mainBlockNode = this.mainElement(currParent, this.#textEditorConfig.elementType.block);
 
 			
 			// Prepare tag to be inserted
@@ -806,12 +806,10 @@ class Texter
 	 * ancestor element for its child element
 	 * =====================================================*/
  
-	mainElement = (element, type) =>
-	{
-		if (element.nodeType != 1) return console.error('Only a HTML Element node is accepted as parameter');
-		
+	mainElement = (node, type) =>
+	{	
 		let mainParent = this.#texterEditor;
-		let currNode = element;
+		let currNode = (node.nodeType == 3) ? node.parentElement : node;
 
 		if (type == this.#textEditorConfig.elementType.block) 
 		{
@@ -821,7 +819,7 @@ class Texter
 
 				if (currNode == mainParent) 
 				{
-					console.log('No block ancestor element found. Please report this issue');
+					console.error('No block ancestor element found. Please report this issue');
 					return null;
 				}
 
@@ -840,7 +838,7 @@ class Texter
 
 				if (currNode == mainParent) 
 				{
-					console.log('No block ancestor element found. Please report this issue');
+					console.error('No block ancestor element found. Please report this issue');
 					return null;
 				}
 
@@ -987,6 +985,7 @@ class Texter
 			else
 			{
 				// Get required data
+				console.log(lastSelectionRange);
 				let commonParent = lastSelectionRange.commonAncestorContainer;
 
 
@@ -995,23 +994,18 @@ class Texter
 				let currOffset = lastSelectionRange.startOffset;
 				let currParent = (currNode.nodeType == 1) ? currNode : currNode.parentElement;
 
-				let mainInlineNode = this.mainElement(currParent, this.#textEditorConfig.elementType.inline);
-				console.dir(mainInlineNode.cloneNode(true));
-				let unNestObj = this.unNestElements(currNode, currOffset, null, mainInlineNode);
-
-				let beginParentNode = unNestObj.focusNode.nextSibling;
-				while(beginParentNode.parentElement != commonParent)
-				{
-					let currNode = beginParentNode;
-					beginParentNode = beginParentNode.parentElement;
-
-					while(currNode)
-					{	
-						let tempNode = currNode;
-						currNode = currNode.nextSibling;
-						this.nodeTreeTagRemover(tempNode, elementTag);
-					}
+				let commonSubParent = null;
+				if (currNode.parentElement != commonParent) 
+				{	
+					let commonSubParent = currNode;
+					while(commonSubParent.parentElement != commonParent)
+						commonSubParent = itrNode.parentElement;
 				}
+				else commonSubParent = currNode.nextSibling
+
+				let unNestObj = this.unNestElements(currNode, currOffset, null, commonSubParent);
+				let beginParentNode = unNestObj.focusNode.nextSibling;
+				return;
 
 
 				// Un-nest and remove tags from end node
@@ -1020,10 +1014,15 @@ class Texter
 				currParent = (currNode.nodeType == 1) ? currNode : currNode.parentElement;
 
 				mainInlineNode = this.mainElement(currParent, this.#textEditorConfig.elementType.inline);
-				console.log(mainInlineNode);
-				unNestObj = this.unNestElements(currNode, currOffset, null, mainInlineNode);
 
-				let endParentNode = unNestObj.focusNode.previousSibling;
+				let endParentNode = null;
+				if (mainInlineNode)
+				{
+					let unNestObj = this.unNestElements(currNode, currOffset, null, mainInlineNode);
+					endParentNode = unNestObj.focusNode.previousSibling;
+				}
+				else endParentNode = currNode.previousSibling;
+
 				while(endParentNode.parentElement != commonParent)
 				{
 					let currNode = endParentNode;
@@ -1338,11 +1337,10 @@ HTMLElement.prototype.texter = function (userConfig)
 
 
 let testHTML = `
-	<p><strong>aldaljd<u>sldkajsdla<i>sdljasdjal<big>lkdjaldjalksdjlaksjdlka</big>ksdjalsadasdsjdlad</i>jlsdjalsjda</u>lfjslfjsldkfjslkdjflksfsdf</strong></p>
-	<p>sl<strong>djasl<strong>sdfsdf</strong>jdalsjdlasjdlasjdla<i>asdhaskdhakjshdahsdla<u>aslkdjasldjalksjdlkasjdlajdlkasjlkdjaslkd</u></i></strong></p>
-	<p>aslkdjalsjdal<i>lasjdalsjdlakjdlasdlkasjdlajdlkassdasdasdasdas</i></p>
+	<p>asdaslddasd<big>asdlasjdlasdsad<i>asljdaljdsad</i>asdkhaskdhakshdka</big>askjdakhdasjhd</p>
+	<p>lsdjasdklada<big>asdasljdalsjdaljsdlkajsdaasdasdasd</big>asdasdasda</p>
 	<ul>
-		<li>saldkj</li>
+		<li>aksdasd<big>ldkjaslkdjalsjda</big></li>
 	</ul>
 `;
 
