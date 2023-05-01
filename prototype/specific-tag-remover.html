@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+</head>
+<body>
+<big id="target">
+	<strong></strong>
+	<i>zlkjsalkjdlaksjdlas</i>
+	<strong>
+		<u>sldjsljdlksd</u>
+		asdasljdalsjd
+	</strong>
+</big>
+
+<script>
+
+let nodeTreeTagRemover = (element, tagName) => 
+{	
+	if (element.nodeType == 1) 
+	{
+		if (element.childNodes.length)
+		{
+			let elemChild = element.firstChild;
+			while (elemChild)
+			{
+				let tempNode = elemChild;
+				elemChild = elemChild.nextSibling;
+				nodeTreeTagRemover(tempNode, tagName);
+			} 
+		}
+
+		console.log(element.cloneNode(true));	
+		let nodeName = element.nodeName;
+
+		// if (!(element.innerText && element.innerText.length))
+		// {
+		// 	element.parentElement.removeChild(element);
+		// 	return;
+		// }
+
+		if (tagName == element.nodeName) 
+		{
+			let parent = element.parentElement;
+
+			while(element.firstChild)
+				parent.insertBefore(element.firstChild, element);
+
+			parent.removeChild(element);
+		}
+	}
+}	
+
+let targetElem = document.querySelector('#target');
+
+console.dir(targetElem);
+nodeTreeTagRemover(targetElem, 'STRONG');
+
+</script>	
+</body>
+</html>

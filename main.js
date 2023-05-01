@@ -325,6 +325,14 @@ class Texter
 		});
 
 
+		this.#texterEditor.addEventListener('focusout', evt => {
+			console.log('OK');
+
+			// Remove all empty Nodes 
+			// Remove all duplicate Nodes
+		});
+
+
 
 		// Add event listeners to menu feature buttons
 		let inlineFeatureBtnSelector = 'span.first-level-item';
@@ -525,7 +533,7 @@ class Texter
 		let emptyTextNode = document.createTextNode(Texter.#emptyText); 
 		let tagNodeParent = tagNode.parentElement;
 
-		if (afterClone.innerText && afterClone.innerText.length) 
+		if (afterClone.properText() && afterClone.properText().length) 
 		{
 			tagNodeParent.replaceChild(afterClone, tagNode);
 			tagNodeParent.insertBefore(emptyTextNode, afterClone);
@@ -533,7 +541,7 @@ class Texter
 		else
 			tagNodeParent.replaceChild(emptyTextNode, tagNode);
 		
-		if (beforeClone.innerText && beforeClone.innerText.length) tagNodeParent.insertBefore(beforeClone ,emptyTextNode);
+		if (beforeClone.properText() && beforeClone.properText().length) tagNodeParent.insertBefore(beforeClone ,emptyTextNode);
 
 
 		return {
@@ -692,16 +700,27 @@ class Texter
 				{
 					while(currElement.parentElement != commonParent)
 					{
+						let currElemParent = currElement.parentElement;
 						newElement = document.createElement(elementTag);
+						currElement = currElement.nextSibling;
 
-						while(currElement.nextSibling)
-							newElement.appendChild(currElement.nextSibling);
+						while(currElement)
+						{
+							let tempNode = currElement;
+							currElement = currElement.nextSibling;
 
-						currElement.parentElement.appendChild(newElement);
+							if (tempNode.properText() && tempNode.properText().length)
+								newElement.appendChild(tempNode);
+							else
+								console.dir(tempNode.cloneNode(true));
+								// tempNode.parentElement.removeChild(tempNode);
+						}
 
-						currElement = currElement.parentElement;
+						if (newElement.properText() && newElement.properText().length) 
+							currElemParent.appendChild(newElement);
+
+						currElement = currElemParent;
 					}
-
 				}
 
 				let	beginParentNode	= currElement;
@@ -727,14 +746,25 @@ class Texter
 				{
 					while(currElement.parentElement != commonParent)
 					{
+						let currElemParent = currElement.parentElement;
 						newElement = document.createElement(elementTag);
+						currElement = currElement.previousSibling;
 
-						while(currElement.previousSibling)
-							newElement.appendChild(currElement.previousSibling);
+						while(currElement)
+						{
+							let tempNode = currElement;
+							currElement = currElement.previousSibling;
 
-						currElement.parentElement.insertBefore(newElement, currElement);
+							if (tempNode.properText() && tempNode.properText().length)
+								newElement.appendChild(tempNode);
+							else
+								tempNode.parentElement.removeChild(tempNode);
+						}
 
-						currElement = currElement.parentElement;
+						if (newElement.properText() && newElement.properText().length)
+							currElemParent.insertBefore(newElement, currElemParent.firstChild);
+
+						currElement = currElemParent;
 					}
 				}
 
@@ -914,11 +944,24 @@ class Texter
 		if (element.nodeType == 1) 
 		{
 			if (element.childNodes.length)
-				for (let child of element.childNodes) 
-					this.nodeTreeTagRemover(child, tagName);
+			{
+				let elemChild = element.firstChild;
+				while (elemChild)
+				{
+					let tempNode = elemChild;
+					elemChild = elemChild.nextSibling;
+					this.nodeTreeTagRemover(tempNode, tagName);
+				} 
+			}			
 
 
 			let nodeName = element.nodeName;
+
+			if (!(element.properText() && element.properText().length))
+			{
+				element.parentElement.removeChild(element);
+				return;
+			}
 
 			if (tagName == element.nodeName) 
 			{
@@ -983,66 +1026,95 @@ class Texter
 				console.log('Same element tag removal - To be developed');
 			}
 			else
-			{
+			{	
 				// Get required data
-				console.log(lastSelectionRange);
 				let commonParent = lastSelectionRange.commonAncestorContainer;
+				let commonParentType = this.getElementType(commonParent);
+				let beginNode = lastSelectionRange.startContainer;
+				let beginOffset = lastSelectionRange.startOffset;
+				let endNode = lastSelectionRange.endContainer;
+				let endOffset = lastSelectionRange.endOffset;
 
 
 				// Un-nest and remove tags from begining node
-				let currNode = lastSelectionRange.startContainer;
-				let currOffset = lastSelectionRange.startOffset;
-				let currParent = (currNode.nodeType == 1) ? currNode : currNode.parentElement;
+				let currParent = (beginNode.nodeType == 1) ? beginNode : beginNode.parentElement;
 
-				let commonSubParent = null;
-				if (currNode.parentElement != commonParent) 
+				let beginParentNode = null;
+				if (this.getElementType(currParent) == 'inline') 
 				{	
-					let commonSubParent = currNode;
-					while(commonSubParent.parentElement != commonParent)
-						commonSubParent = itrNode.parentElement;
+					let mainInlineNode = this.mainElement(beginNode, this.#textEditorConfig.elementType.inline);
+					let unNestObj = this.unNestElements(beginNode, beginOffset, null, mainInlineNode);
+					beginParentNode = unNestObj.focusNode;
 				}
-				else commonSubParent = currNode.nextSibling
+				else 
+					beginParentNode = beginNode; 
 
-				let unNestObj = this.unNestElements(currNode, currOffset, null, commonSubParent);
-				let beginParentNode = unNestObj.focusNode.nextSibling;
-				return;
+				
+				// FakeCommonParent provision
+				if (commonParentType == 'inline') commonParent = beginParentNode.nextSibling;
 
+				// Remove tag from begin commonSubParent
+				if (commonParentType != 'inline') 
+				{
+					while(beginParentNode && beginParentNode.parentElement != commonParent)
+					{
+						let tempNode = beginParentNode;
+						beginParentNode = beginParentNode.parentElement;
+						tempNode = tempNode.nextSibling;
+
+						while(tempNode)
+						{
+							let tempNode1 = tempNode;
+							tempNode = tempNode.nextSibling;
+
+							if (tempNode1.nodeType == 1) 
+								this.nodeTreeTagRemover(tempNode1, elementTag);
+						}
+					}					
+				}
+			
 
 				// Un-nest and remove tags from end node
-				currNode = lastSelectionRange.endContainer;
-				currOffset = lastSelectionRange.endOffset;
-				currParent = (currNode.nodeType == 1) ? currNode : currNode.parentElement;
-
-				mainInlineNode = this.mainElement(currParent, this.#textEditorConfig.elementType.inline);
+				currParent = (endNode.nodeType == 1) ? endNode : endNode.parentElement;
 
 				let endParentNode = null;
-				if (mainInlineNode)
+				if (this.getElementType(currParent) == 'inline')
 				{
-					let unNestObj = this.unNestElements(currNode, currOffset, null, mainInlineNode);
-					endParentNode = unNestObj.focusNode.previousSibling;
+					let commonSubParent = this.mainElement(endNode, this.#textEditorConfig.elementType.inline);
+					let unNestObj = this.unNestElements(endNode, endOffset, null, commonSubParent);
+					endParentNode = unNestObj.focusNode;
 				}
-				else endParentNode = currNode.previousSibling;
+				else 
+					endParentNode = endNode;
 
-				while(endParentNode.parentElement != commonParent)
+
+				// Remove tag from end commonSubParent
+				if (commonParentType != 'inline') 
 				{
-					let currNode = endParentNode;
-					endParentNode = endParentNode.parentElement;
+					while(endParentNode.parentElement != commonParent)
+					{
+						let tempNode = endParentNode;
+						endParentNode = endParentNode.parentElement;
+						tempNode = tempNode.previousSibling;
 
-					while(currNode)
-					{	
-						let tempNode = currNode;
-						currNode = currNode.previousSibling;
-						this.nodeTreeTagRemover(tempNode, elementTag);
+						while(tempNode)
+						{
+							let tempNode1 = tempNode;
+							tempNode = tempNode.previousSibling;
+
+							if (tempNode1.nodeType == 1) 
+								this.nodeTreeTagRemover(tempNode1, elementTag);
+						}
 					}
-				}
+				}					
 
 
 				// Remove tags from the elements between startingParentNode and endParentNode
-				currNode = beginParentNode.nextSibling;
+				let currNode = beginParentNode.nextSibling;
 
-				if (currNode != endParentNode) 
+				if (currNode && currNode != endParentNode) 
 				{
-					while(currNode != endParentNode)
+					while(currNode && currNode != endParentNode)
 					{
 						let tempNode = currNode;
 						currNode = currNode.nextSibling;
@@ -1332,12 +1404,25 @@ HTMLElement.prototype.texter = function (userConfig)
 		return false;
 }
 
+Node.prototype.properText = function () 
+{
+	let orgText = this.textContent;
+
+	if (orgText.length)
+	{
+		orgText = orgText.replace(/\n/g, '');
+		orgText = orgText.replace(/\t/g, '');
+	} 
+
+	return orgText;
+}
+
 
 // Test Code -----------------------------------
 
 
 let testHTML = `
-	<p>asdaslddasd<big>asdlasjdlasdsad<i>asljdaljdsad</i>asdkhaskdhakshdka</big>askjdakhdasjhd</p>
+	<p>asdaslddasd<big>asdlas<strong>sdlkjfslkdjflks</strong>jdlasdsad<i>asljdaljdsad</i>asdkhaskdhakshdka</big>skjdakhdasjhd</p>
 	<p>lsdjasdklada<big>asdasljdalsjdaljsdlkajsdaasdasdasd</big>asdasdasda</p>
 	<ul>
 		<li>aksdasd<big>ldkjaslkdjalsjda</big></li>
