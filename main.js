@@ -284,7 +284,10 @@ class Texter
 	 * ===================================================*/
 
 	addTexterListeners = () => 
-	{
+	{	
+		// Set p as default
+		document.execCommand('defaultParagraphSeparator', false, 'p');
+
 		// Event array to be added to texterEditor
 		let editorEvt = ['keyup', 'mouseup', 'focusin'];
 
@@ -397,29 +400,6 @@ class Texter
 			newRange.collapse(true);
 			currentSelection.removeAllRanges();
 			currentSelection.addRange(newRange);			
-		}
-
-		if (evt.type == 'keyup' && evt.keyCode == 13) 
-		{
-			let randomStr = this.generateString();
-
-			let p = document.createElement('p');
-			p.appendChild(document.createElement('br'));
-
-			let newDiv = (currentRange.startContainer.nodeName == 'DIV') ? currentRange.startContainer : null;
-
-			if (!newDiv) return;
-
-
-			let newDivIndex = newDiv.childElementCount;
-			this.#texterEditor.replaceChild(p, newDiv);
-
-
-			let newRange = document.createRange();
-			newRange.setStart(p.firstChild, 0);
-			newRange.collapse(true);
-			currentSelection.removeAllRanges();
-			currentSelection.addRange(newRange);
 		}
 	}
 
@@ -620,33 +600,37 @@ class Texter
 
 
 			// Handle non-empty element
-			if (typeof currNode.nodeValue == 'string' &&
-				currNode.nodeValue &&
-				currNode.nodeType == 3 && 
-				currNode.nodeValue != '\n\t')  
+			if (currNode.nodeType == 3)  
 			{
-				let beforeSelection = document.createTextNode(currNode.nodeValue.slice(0, lastSelectionRange.startOffset));
-				let afterSelection = document.createTextNode(currNode.nodeValue.slice(lastSelectionRange.startOffset));
+				if (currNode.properText().length) 
+				{
+					let beforeSelection = document.createTextNode(currNode.nodeValue.slice(0, lastSelectionRange.startOffset));
+					let afterSelection = document.createTextNode(currNode.nodeValue.slice(lastSelectionRange.startOffset));
 
-				currParent.insertBefore(beforeSelection, currNode);
+					currParent.insertBefore(beforeSelection, currNode);
 
-				if (currNode.nextSibling) 
-					currParent.insertBefore(afterSelection, currNode.nextSibling);
-				else
-					currParent.appendChild(afterSelection);
-			}
+					if (currNode.nextSibling) 
+						currParent.insertBefore(afterSelection, currNode.nextSibling);
+					else
+						currParent.appendChild(afterSelection);
+				
+				}
 
-
-			// Insert Tag
-			if (currParent == mainBlockNode) 
-			{
-				if (currParent.childNodes.length) 
-					while(currParent.firstChild && currParent.firstChild.nodeType == 1) currParent.removeChild(currParent.firstChild);
-
-				currParent.appendChild(newElement);
-			}
-			else
 				currParent.replaceChild(newElement, currNode);
+			}
+			else if(currNode.nodeType == 1 && currNode.childNodes.length == 0)
+			{
+				if (currNode.nodeName == 'BR') 
+				{
+					let tempNode = currNode;
+					currNode = currNode.parentElement;
+
+					currNode.removeChild(tempNode);
+				}
+
+				currNode.insertBefore(newElement, currNode.firstChild);
+			}
+			else console.error('Unknown element in range');
 
 
 			// Set the selection back to last range
@@ -655,7 +639,6 @@ class Texter
 		}
 		else // Non-empty selection
 		{
-			console.log(lastSelectionRange);
 			if (lastSelectionRange.startContainer == lastSelectionRange.endContainer) 
 			{
 				let newElement = document.createElement(elementTag);
@@ -817,7 +800,7 @@ class Texter
 					}
 				}	
 
-				// this.setCaretPosition(focusElement.firstChild, 0);		
+				this.setCaretPosition(focusElement.firstChild, 0);		
 			}
 		}
 	}
@@ -1054,7 +1037,7 @@ class Texter
 				if (this.getElementType(beginNode.parentElement) == 'inline') 
 				{	
 					let mainInlineNode = this.mainElement(beginNode, this.#textEditorConfig.elementType.inline);
-					let unNestObj = this.unNestElements(beginNode, beginOffset, null, mainInlineNode);
+					let unNestObj = this.unNestElements(beginNode, beginOffset, null, mainInlineNode);	
 					beginParentNode = unNestObj.focusNode;
 				}
 				else 
@@ -1119,6 +1102,9 @@ class Texter
 				}					
 
 
+				console.dir(beginParentNode);
+				console.dir(endParentNode);
+
 
 				// Remove tags from the elements between startingParentNode and endParentNode
 				let currNode = beginParentNode.nextSibling;
@@ -1131,10 +1117,7 @@ class Texter
 						currNode = currNode.nextSibling;
 
 						if (tempNode.nodeType == 1)
-							if (tempNode.childNodes.length)
-								for(let tempChild of tempNode.childNodes)
-									if (tempChild.nodeType == 1)
-										this.nodeTreeTagRemover(tempChild, elementTag);
+							this.nodeTreeTagRemover(tempNode, elementTag);
 					}
 				}
 			}
@@ -1384,6 +1367,7 @@ class Texter
 
 
 /**
+ * @function : texter
  * @module : Prototype extension
  * @description : This is the starting point of this functionality
  * -> It adds a prototype function to the HTML element class
@@ -1416,6 +1400,14 @@ HTMLElement.prototype.texter = function (userConfig)
 }
 
 
+
+/**
+ * @function : properText
+ * @module : Prototype Extension
+ * @description : This function returns the proper text content of
+ * a node object by removing empty spaces and some specific 
+ * characters or unicodes
+ * ================================================================*/
 
 Node.prototype.properText = function () 
 {
