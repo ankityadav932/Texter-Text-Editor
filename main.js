@@ -655,6 +655,7 @@ class Texter
 		}
 		else // Non-empty selection
 		{
+			console.log(lastSelectionRange);
 			if (lastSelectionRange.startContainer == lastSelectionRange.endContainer) 
 			{
 				let newElement = document.createElement(elementTag);
@@ -775,55 +776,48 @@ class Texter
 				if (beginParentNode != commonParent && endParentNode != commonParent) 
 				{
 					currElement = beginParentNode.nextSibling; 
-					while(currElement != endParentNode)
+					while(currElement && currElement != endParentNode)
 					{	
-						if (currElement.nodeType == 1) 
+						let tempNode = currElement;
+						currElement = currElement.nextSibling;
+
+						if (tempNode.nodeType == 1) 
 						{
-							let currElemType = this.getElementType(currElement);
+							let currElemType = this.getElementType(tempNode);
 							newElement = document.createElement(elementTag);
 
 							if (currElemType == 'block') 
 							{
-								while(currElement.firstChild)
-									newElement.appendChild(currElement.firstChild);
+								while(tempNode.firstChild)
+									newElement.appendChild(tempNode.firstChild);
 
-								currElement.appendChild(newElement);		
+								tempNode.appendChild(newElement);		
 							}
 							else if (currElemType == 'inline')
-							{
-								let tempNextSibling = currElement.nextSibling;
-								let tempParentElement = currElement.parentElement;
+							{	
+								let tempParentElement = tempNode.parentElement;
 
-								newElement.appendChild(currElement);
-								tempParentElement.insertBefore(newElement, tempNextSibling);
+								newElement.appendChild(tempNode.cloneNode(true));
+								tempParentElement.replaceChild(newElement, tempNode);
 							}
 							else console.error('DOM element display type is out of config - ' + currElemType);
 						}
-						else if (currElement.nodeType == 3)
+						else if (tempNode.nodeType == 3)
 						{
-							if (currElement && 
-								currElement.nodeValue.length && 
-								currElement.nodeValue != "\n\t" && 
-								currElement.nodeValue.trim() != '') 
+							if (tempNode && tempNode.properText().length) 
 							{
-								let tempNodeParent = currElement.parentElement;
-								let tempNodeNextSibling = currElement.nextSibling ? currElement.nextSibling : null;
+								let tempNodeParent = tempNode.parentElement;
 								newElement = document.createElement(elementTag);
-								newElement.appendChild(currElement);
-
-								if (tempNodeNextSibling) 
-									tempNodeParent.insertBefore(newElement, tempNodeNextSibling);
-								else
-									tempNodeParent.appendChild(newElement);
+								
+								newElement.appendChild(tempNode.cloneNode(true));
+								tempNodeParent.replaceChild(newElement, tempNode);
 							}
 						}
-						else console.error('DOM node type is out of config - ' + currElement.nodeType);
-
-						currElement = currElement.nextSibling;
+						else console.error('DOM node type is out of config - ' + tempNode.nodeType);
 					}
 				}	
 
-				this.setCaretPosition(focusElement.firstChild, 0);		
+				// this.setCaretPosition(focusElement.firstChild, 0);		
 			}
 		}
 	}
@@ -987,7 +981,7 @@ class Texter
 		let lastSelectionRange = this.getLastRange();		
 
 		if (lastSelectionRange.collapsed) 
-		{
+		{	
 			let currNode = lastSelectionRange.startContainer;
 			let currOffset = lastSelectionRange.startOffset;
 
@@ -1030,17 +1024,34 @@ class Texter
 				// Get required data
 				let commonParent = lastSelectionRange.commonAncestorContainer;
 				let commonParentType = this.getElementType(commonParent);
+
+
+				// Mark begin and end Nodes
 				let beginNode = lastSelectionRange.startContainer;
+				let beginNodeSpan = document.createElement('SPAN');
 				let beginOffset = lastSelectionRange.startOffset;
+
 				let endNode = lastSelectionRange.endContainer;
+				let endNodeSpan = document.createElement('SPAN');	
 				let endOffset = lastSelectionRange.endOffset;
 
+				beginNodeSpan.setAttribute('id', 'begin-node');
+				endNodeSpan.setAttribute('id', 'end-node');
 
-				// Un-nest and remove tags from begining node
-				let currParent = (beginNode.nodeType == 1) ? beginNode : beginNode.parentElement;
+				beginNodeSpan.appendChild(beginNode.cloneNode(true));
+				endNodeSpan.appendChild(endNode.cloneNode(true));	
+
+				beginNode.parentElement.replaceChild(beginNodeSpan,beginNode);
+				endNode.parentElement.replaceChild(endNodeSpan,endNode);
+				
+
+				// Un-nest and remove tags from begining node 
+				beginNodeSpan = this.#texterEditor.querySelector('#begin-node');
+				beginNode = beginNodeSpan.firstChild;
+				beginNodeSpan.parentElement.replaceChild(beginNode, beginNodeSpan);
 
 				let beginParentNode = null;
-				if (this.getElementType(currParent) == 'inline') 
+				if (this.getElementType(beginNode.parentElement) == 'inline') 
 				{	
 					let mainInlineNode = this.mainElement(beginNode, this.#textEditorConfig.elementType.inline);
 					let unNestObj = this.unNestElements(beginNode, beginOffset, null, mainInlineNode);
@@ -1049,9 +1060,6 @@ class Texter
 				else 
 					beginParentNode = beginNode; 
 
-				
-				// FakeCommonParent provision
-				if (commonParentType == 'inline') commonParent = beginParentNode.nextSibling;
 
 				// Remove tag from begin commonSubParent
 				if (commonParentType != 'inline') 
@@ -1072,13 +1080,15 @@ class Texter
 						}
 					}					
 				}
-			
+				
 
-				// Un-nest and remove tags from end node
-				currParent = (endNode.nodeType == 1) ? endNode : endNode.parentElement;
+				// Un-nest and remove tags from end node 
+				endNodeSpan = this.#texterEditor.querySelector('#end-node');
+				endNode = endNodeSpan.firstChild;
+				endNodeSpan.parentElement.replaceChild(endNode, endNodeSpan);
 
 				let endParentNode = null;
-				if (this.getElementType(currParent) == 'inline')
+				if (this.getElementType(endNode.parentElement) == 'inline')
 				{
 					let commonSubParent = this.mainElement(endNode, this.#textEditorConfig.elementType.inline);
 					let unNestObj = this.unNestElements(endNode, endOffset, null, commonSubParent);
@@ -1107,6 +1117,7 @@ class Texter
 						}
 					}
 				}					
+
 
 
 				// Remove tags from the elements between startingParentNode and endParentNode
@@ -1404,14 +1415,17 @@ HTMLElement.prototype.texter = function (userConfig)
 		return false;
 }
 
+
+
 Node.prototype.properText = function () 
 {
-	let orgText = this.textContent;
+	let orgText = this.textContent.trim();
 
 	if (orgText.length)
 	{
 		orgText = orgText.replace(/\n/g, '');
 		orgText = orgText.replace(/\t/g, '');
+		orgText = orgText.replace(/\u200b/g, '');
 	} 
 
 	return orgText;
