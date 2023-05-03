@@ -1328,13 +1328,46 @@ class Texter
 			}
 			else if (generalTags.includes(featureTag))
 			{
+				let currNode = beginBlockNode;
+				
 				while(true)
 				{
-					console.log('To be developed');
+					let tempNode = currNode;			
+					currNode = (currNode.nextSibling) ? currNode.nextSibling : currNode;
+
+					if (listTags.includes(tempNode.nodeName)) 
+					{
+						while(tempNode.firstChild)
+						{
+							let templi = tempNode.firstChild
+							let newElement = document.createElement(featureTag);				
+
+							while(templi.firstChild)
+								newElement.appendChild(templi.firstChild);
+
+							tempNode.parentElement.insertBefore(newElement, tempNode);
+							tempNode.removeChild(templi);
+						}
+
+						tempNode.parentElement.removeChild(tempNode);
+					}
+					else if (generalTags.includes(tempNode.nodeName))
+					{
+						let newElement = document.createElement(featureTag);				
+
+						while(tempNode.firstChild)
+							newElement.appendChild(tempNode.firstChild);
+ 
+						tempNode.parentElement.replaceChild(newElement, tempNode);
+					}
+					else 
+						continue;	
+
+					if (tempNode == endBlockNode) 
+						break;
 				}
 			}
 			else console.log('New feature cant be implemented on custom feature');
-
 		}
 	}
 
