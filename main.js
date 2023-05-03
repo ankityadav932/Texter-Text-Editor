@@ -35,7 +35,8 @@ class Texter
 		},
 		featureType : {
 			inlineFeature : 1,
-			newLineFeature : 2
+			newLineFeature : 2,
+			customFeature : 3
 		},
 		elementType : {
 			inline : 1,
@@ -134,7 +135,7 @@ class Texter
 		tables : {
 			name : 'TABLE',
 			class : 'tables-btn',
-			type : this.#textEditorConfig.featureType.newLineFeature,
+			type : this.#textEditorConfig.featureType.customFeature,
 			content : `
 			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-table" viewBox="0 0 16 16">
 			  <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zm-5 3v-3H6v3h4zm-5 0v-3H1v2a1 1 0 0 0 1 1h3zm-4-4h4V8H1v3zm0-4h4V4H1v3zm5-3v3h4V4H6zm4 4H6v3h4V8z"/>
@@ -144,7 +145,7 @@ class Texter
 		image : {
 			name : 'IMG',
 			class : 'image-btn',
-			type : this.#textEditorConfig.featureType.newLineFeature,
+			type : this.#textEditorConfig.featureType.customFeature,
 			content : `
 			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-image" viewBox="0 0 16 16">
 			  <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
@@ -256,7 +257,7 @@ class Texter
 
 		/* TEST CODE { */
 
-		this.#texterEditor.innerHTML = testHTML;
+		// this.#texterEditor.innerHTML = testHTML;
 
 		/* TEST CODE } */
 
@@ -618,7 +619,7 @@ class Texter
 
 				currParent.replaceChild(newElement, currNode);
 			}
-			else if(currNode.nodeType == 1 && currNode.childNodes.length == 0)
+			else if(currNode.nodeType == 1)
 			{
 				if (currNode.nodeName == 'BR') 
 				{
@@ -628,7 +629,10 @@ class Texter
 					currNode.removeChild(tempNode);
 				}
 
-				currNode.insertBefore(newElement, currNode.firstChild);
+				if (currNode.childNodes.length) 
+					currNode.insertBefore(newElement, currNode.firstChild);
+				else
+					currNode.appendChild(newElement);
 			}
 			else console.error('Unknown element in range');
 
@@ -696,8 +700,7 @@ class Texter
 							if (tempNode.properText() && tempNode.properText().length)
 								newElement.appendChild(tempNode);
 							else
-								console.dir(tempNode.cloneNode(true));
-								// tempNode.parentElement.removeChild(tempNode);
+								tempNode.parentElement.removeChild(tempNode);
 						}
 
 						if (newElement.properText() && newElement.properText().length) 
@@ -1125,6 +1128,216 @@ class Texter
 	}	
 
 
+	/**
+	 * @function : activateNewLineFeature
+	 * @purpose : To activate a new line feature
+	 * ============================================*/
+
+	activateNewLineFeature = (feature) => 
+	{
+		let lastSelectionRange = this.getLastRange();
+		let featureTag = feature.name;
+		let listTags = ['UL', 'OL'];
+		let generalTags = ['H1', 'H2', 'H3', 'P'];
+
+		if (lastSelectionRange.collapsed) 
+		{
+			let mainBlockNode = this.mainElement(lastSelectionRange.startContainer, this.#textEditorConfig.elementType.block);
+
+			if (listTags.includes(featureTag)) 
+			{
+				let newList = document.createElement(featureTag);
+				
+				if (listTags.includes(mainBlockNode.nodeName)) 
+				{
+					while(mainBlockNode.firstChild)
+						newList.appendChild(mainBlockNode.firstChild);
+
+					mainBlockNode.parentElement.replaceChild(newList, mainBlockNode);
+
+					this.setCaretPosition(newList.lastChild, 0);
+				}
+				else if (generalTags.includes(mainBlockNode.nodeName))
+				{
+					let newListItem = document.createElement('LI');
+
+					while(mainBlockNode.firstChild)
+						newListItem.appendChild(mainBlockNode.firstChild);
+
+					newList.appendChild(newListItem);
+					
+					mainBlockNode.parentElement.replaceChild(newList, mainBlockNode);
+					
+					this.setCaretPosition(newListItem, 0);
+				}
+				else console.log('New feature cant be implemented on custom feature');
+			}
+			else
+			{
+				if (listTags.includes(mainBlockNode.nodeName)) 
+				{
+					let listTag = mainBlockNode.nodeName;
+					
+					let liElement = lastSelectionRange.startContainer;
+					while(liElement.nodeName.toUpperCase() != 'LI')
+						liElement = liElement.parentElement;
+
+					let newElement = document.createElement(featureTag);
+					while(liElement.firstChild)
+						newElement.appendChild(liElement.firstChild);
+
+					let beforeLi = document.createElement(listTag);
+					while(liElement.previousSibling)
+					{
+						if (beforeLi.childNodes.length) 
+							beforeLi.insertBefore(liElement.previousSibling, beforeLi.firstChild);
+						else
+							beforeLi.appendChild(liElement.previousSibling);
+					}	
+
+					let afterLi = document.createElement(listTag);
+					while(liElement.nextSibling)
+						afterLi.appendChild(liElement.nextSibling);
+
+					if (afterLi.childNodes.length) 
+					{
+						mainBlockNode.parentElement.replaceChild(afterLi, mainBlockNode);
+						afterLi.parentElement.insertBefore(newElement, afterLi);
+					}
+					else
+						mainBlockNode.parentElement.replaceChild(newElement, mainBlockNode);
+
+					newElement.parentElement.insertBefore(beforeLi, newElement);
+
+					this.setCaretPosition(newElement, 0);
+				}
+				else if (generalTags.includes(mainBlockNode.nodeName))
+				{
+					let newElement = document.createElement(featureTag);
+
+					while(mainBlockNode.firstChild)
+						newElement.appendChild(mainBlockNode.firstChild);
+
+					mainBlockNode.parentElement.replaceChild(newElement, mainBlockNode);
+
+					this.setCaretPosition(newElement, 0);
+				}
+				else console.log('New feature cant be implemented on custom feature');
+			}
+		}
+		else
+		{
+			let beginNode = lastSelectionRange.startContainer;
+			let endNode = lastSelectionRange.endContainer;
+			let beginBlockNode = this.mainElement(beginNode, this.#textEditorConfig.elementType.block);
+			let endBlockNode = this.mainElement(endNode, this.#textEditorConfig.elementType.block);
+
+
+			if (!(listTags.includes(beginBlockNode.nodeName) || generalTags.includes(beginBlockNode.nodeName)))
+				return console.log('New feature cant be implemented on custom feature');
+
+			if (!(listTags.includes(endBlockNode.nodeName) || generalTags.includes(endBlockNode.nodeName)))
+				return console.log('New feature cant be implemented on custom feature');
+
+
+			// Un-nest begin block element if LI
+			if (listTags.includes(beginBlockNode.nodeName))
+			{
+				let mainLi = beginNode;
+				while(mainLi.nodeName.toUpperCase() != 'LI')
+					mainLi = mainLi.parentElement;
+
+				let beforeList = document.createElement(beginBlockNode.nodeName);
+				while(mainLi.previousSibling)
+				{
+					if (beforeList.childNodes.length) 
+						beforeList.appendChild(mainLi.previousSibling);
+					else
+						beforeList.insertBefore(mainLi.previousSibling, beforeList.firstChild);
+				}
+
+				beginBlockNode.parentElement.insertBefore(beforeList, beginBlockNode);
+			}
+
+
+			// Un-nest end block element if LI
+			if (listTags.includes(endBlockNode.nodeName))
+			{
+				let mainLi = endNode;
+				while(mainLi.nodeName.toUpperCase() != 'LI')
+					mainLi = mainLi.parentElement;
+
+				let afterList = document.createElement(beginBlockNode.nodeName);
+				while(mainLi.nextSibling)
+					afterList.appendChild(mainLi.nextSibling);
+
+				if (endBlockNode.nextSibling) 
+					endBlockNode.parentElement.insertBefore(afterList, endBlockNode.nextSibling);
+				else
+					endBlockNode.appendChild(afterList);
+			}
+
+
+			// Activate feature for middle element between beginBlockNode and endBlockNode
+			if (listTags.includes(featureTag)) 
+			{
+				let currNode = beginBlockNode;
+				let newElement = document.createElement(featureTag);
+
+				while(true)
+				{
+					let tempNode = currNode;
+					currNode = (currNode.nextSibling) ? currNode.nextSibling : currNode;
+
+					if (listTags.includes(tempNode.nodeName)) 
+					{
+						while(tempNode.firstChild)
+							newElement.appendChild(tempNode.firstChild);
+
+						if (tempNode != endBlockNode) 
+							tempNode.parentElement.removeChild(tempNode);
+					}
+					else if (generalTags.includes(tempNode.nodeName))
+					{
+						let newLi = document.createElement('LI');
+
+						while(tempNode.firstChild)
+							newLi.appendChild(tempNode.firstChild);
+
+						newElement.appendChild(newLi);
+
+						if (tempNode != endBlockNode) 
+							tempNode.parentElement.removeChild(tempNode);
+					}
+					else 
+					{
+						if (newElement.childNodes.length) 
+							tempNode.parentElement.insertBefore(newElement, tempNode);
+
+						newElement = document.createElement(featureTag);
+						continue;	
+					}
+
+					if (tempNode == endBlockNode) 
+					{
+						tempNode.parentElement.insertBefore(newElement, tempNode);
+						tempNode.parentElement.removeChild(tempNode);
+						break;
+					}
+				}
+			}
+			else if (generalTags.includes(featureTag))
+			{
+				while(true)
+				{
+					console.log('To be developed');
+				}
+			}
+			else console.log('New feature cant be implemented on custom feature');
+
+		}
+	}
+
 
 	/**
 	 * @function : changeFeatureState
@@ -1174,8 +1387,12 @@ class Texter
 				this.insertInlineTag(feature.name);
 			break;
 
-			case this.#textEditorConfig.featureType.newLineFeature:
-				console.log('New Line tag insertion - To be developed');
+			case this.#textEditorConfig.featureType.newLineFeature: 
+				this.activateNewLineFeature(feature);
+			break;	
+
+			case this.#textEditorConfig.featureType.customFeature:
+				console.log('Custom Feature - To be developed');
 			break;					
 
 			default:
@@ -1203,8 +1420,12 @@ class Texter
 			break;
 
 			case this.#textEditorConfig.featureType.newLineFeature:
-				console.log('New Line tag removal - To be developed');
-			break;					
+				console.log('New Line feature cannot be disabled. It can be toggled with another new line feature');
+			break;		
+
+			case this.#textEditorConfig.featureType.customFeature:
+				console.log('Custom Feature cannot be deactivated by menu. It has deactivation option within itself');
+			break;			
 
 			default:
 				console.error('Unknown feature type');
