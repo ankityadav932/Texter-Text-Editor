@@ -20,6 +20,8 @@ class Texter
 	#texterEditor = null;
 	#texterActiveInlineFeatures = [];
 	#texterActiveNewlineFeature = null;
+	#activeCustomFeature = null;
+	#activeCustomFeatureNode = null;
 
 
 	// Last selection param
@@ -44,6 +46,89 @@ class Texter
 		}
 	};
 
+	#texterIcons = {
+		p : `
+			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-paragraph" viewBox="0 0 16 16">
+			  <path d="M10.5 15a.5.5 0 0 1-.5-.5V2H9v12.5a.5.5 0 0 1-1 0V9H7a4 4 0 1 1 0-8h5.5a.5.5 0 0 1 0 1H11v12.5a.5.5 0 0 1-.5.5z"/>
+			</svg>
+		`,
+		h1 : `
+			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-type-h1" viewBox="0 0 16 16">
+			  <path d="M8.637 13V3.669H7.379V7.62H2.758V3.67H1.5V13h1.258V8.728h4.62V13h1.259zm5.329 0V3.669h-1.244L10.5 5.316v1.265l2.16-1.565h.062V13h1.244z"/>
+			</svg>
+		`,
+		h2 : `
+			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-type-h2" viewBox="0 0 16 16">
+			  <path d="M7.638 13V3.669H6.38V7.62H1.759V3.67H.5V13h1.258V8.728h4.62V13h1.259zm3.022-6.733v-.048c0-.889.63-1.668 1.716-1.668.957 0 1.675.608 1.675 1.572 0 .855-.554 1.504-1.067 2.085l-3.513 3.999V13H15.5v-1.094h-4.245v-.075l2.481-2.844c.875-.998 1.586-1.784 1.586-2.953 0-1.463-1.155-2.556-2.919-2.556-1.941 0-2.966 1.326-2.966 2.74v.049h1.223z"/>
+			</svg>
+		`,
+		h3 : `
+			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-type-h3" viewBox="0 0 16 16">
+			  <path d="M7.637 13V3.669H6.379V7.62H1.758V3.67H.5V13h1.258V8.728h4.62V13h1.259zm3.625-4.272h1.018c1.142 0 1.935.67 1.949 1.674.013 1.005-.78 1.737-2.01 1.73-1.08-.007-1.853-.588-1.935-1.32H9.108c.069 1.327 1.224 2.386 3.083 2.386 1.935 0 3.343-1.155 3.309-2.789-.027-1.51-1.251-2.16-2.037-2.249v-.068c.704-.123 1.764-.91 1.723-2.229-.035-1.353-1.176-2.4-2.954-2.385-1.873.006-2.857 1.162-2.898 2.358h1.196c.062-.69.711-1.299 1.696-1.299.998 0 1.695.622 1.695 1.525.007.922-.718 1.592-1.695 1.592h-.964v1.074z"/>
+			</svg>
+		`,
+		boldText : `
+			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-type-bold" viewBox="0 0 16 16">
+				<path d="M8.21 13c2.106 0 3.412-1.087 3.412-2.823 0-1.306-.984-2.283-2.324-2.386v-.055a2.176 2.176 0 0 0 1.852-2.14c0-1.51-1.162-2.46-3.014-2.46H3.843V13H8.21zM5.908 4.674h1.696c.963 0 1.517.451 1.517 1.244 0 .834-.629 1.32-1.73 1.32H5.908V4.673zm0 6.788V8.598h1.73c1.217 0 1.88.492 1.88 1.415 0 .943-.643 1.449-1.832 1.449H5.907z"/>
+			</svg>
+		`,
+		italicText : `
+			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-type-italic" viewBox="0 0 16 16">
+			  <path d="M7.991 11.674 9.53 4.455c.123-.595.246-.71 1.347-.807l.11-.52H7.211l-.11.52c1.06.096 1.128.212 1.005.807L6.57 11.674c-.123.595-.246.71-1.346.806l-.11.52h3.774l.11-.52c-1.06-.095-1.129-.211-1.006-.806z"/>
+			</svg>
+		`,
+		underlinedText : `
+			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-type-underline" viewBox="0 0 16 16">
+			  <path d="M5.313 3.136h-1.23V9.54c0 2.105 1.47 3.623 3.917 3.623s3.917-1.518 3.917-3.623V3.136h-1.23v6.323c0 1.49-.978 2.57-2.687 2.57-1.709 0-2.687-1.08-2.687-2.57V3.136zM12.5 15h-9v-1h9v1z"/>
+			</svg>
+		`,
+		unorderedlists : `
+			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-list-task" viewBox="0 0 16 16">
+			  <path fill-rule="evenodd" d="M2 2.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5V3a.5.5 0 0 0-.5-.5H2zM3 3H2v1h1V3z"/>
+			  <path d="M5 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM5.5 7a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1h-9zm0 4a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1h-9z"/>
+			  <path fill-rule="evenodd" d="M1.5 7a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5H2a.5.5 0 0 1-.5-.5V7zM2 7h1v1H2V7zm0 3.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5H2zm1 .5H2v1h1v-1z"/>
+			</svg>
+		`,
+		orderedlists : `
+			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-list-ol" viewBox="0 0 16 16">
+			  <path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5z"/>
+			  <path d="M1.713 11.865v-.474H2c.217 0 .363-.137.363-.317 0-.185-.158-.31-.361-.31-.223 0-.367.152-.373.31h-.59c.016-.467.373-.787.986-.787.588-.002.954.291.957.703a.595.595 0 0 1-.492.594v.033a.615.615 0 0 1 .569.631c.003.533-.502.8-1.051.8-.656 0-1-.37-1.008-.794h.582c.008.178.186.306.422.309.254 0 .424-.145.422-.35-.002-.195-.155-.348-.414-.348h-.3zm-.004-4.699h-.604v-.035c0-.408.295-.844.958-.844.583 0 .96.326.96.756 0 .389-.257.617-.476.848l-.537.572v.03h1.054V9H1.143v-.395l.957-.99c.138-.142.293-.304.293-.508 0-.18-.147-.32-.342-.32a.33.33 0 0 0-.342.338v.041zM2.564 5h-.635V2.924h-.031l-.598.42v-.567l.629-.443h.635V5z"/>
+			</svg>
+		`,
+		tables : `
+			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-table" viewBox="0 0 16 16">
+			  <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zm-5 3v-3H6v3h4zm-5 0v-3H1v2a1 1 0 0 0 1 1h3zm-4-4h4V8H1v3zm0-4h4V4H1v3zm5-3v3h4V4H6zm4 4H6v3h4V8z"/>
+			</svg>
+		`,
+		image : `
+			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-image" viewBox="0 0 16 16">
+			  <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+			  <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+			</svg>
+		`,	
+		alignLeft : `
+			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-text-left" viewBox="0 0 16 16">
+			  <path fill-rule="evenodd" d="M2 12.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5zm0-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/>
+			</svg>
+		`,
+		alignRight : `
+			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-text-right" viewBox="0 0 16 16">
+			  <path fill-rule="evenodd" d="M6 12.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-4-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5zm4-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-4-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/>
+			</svg>
+		`,
+		alignCenter : `
+			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-text-center" viewBox="0 0 16 16">
+			  <path fill-rule="evenodd" d="M4 12.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5zm2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/>
+			</svg>
+		`,
+		close : `
+			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-circle" viewBox="0 0 16 16">
+			  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+			  <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+			</svg>
+		`,
+	} 
+
 
 	// Features
 	#textEditorFeatures = {
@@ -51,107 +136,81 @@ class Texter
 			name : 'P',
 			class : 'p-btn',
 			type : this.#textEditorConfig.featureType.newLineFeature,
-			content : `
-			<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="20" height="20" fill="currentColor" x="0px" y="0px" viewBox="0 0 100.16 122.88" style="enable-background:new 0 0 100.16 122.88" xml:space="preserve">
-				<g>
-					<path class="st0" d="M89.06,18.28v101c0,1.98-1.64,3.6-3.66,3.6H74.43c-2.01,0-3.66-1.62-3.66-3.6v-101H58.24v100.99 c0,1.98-1.64,3.6-3.66,3.6H43.62c-2.01,0-3.66-1.62-3.66-3.6V79l-0.39,0C17.72,79,0,61.28,0,39.44C0,14.12,20.45,0,43.75,0H96.5 c2.01,0,3.66,1.64,3.66,3.66v10.97c0,2.01-1.65,3.66-3.66,3.66H89.06L89.06,18.28z"></path>
-				</g>
-			</svg>
-			`,
+			content : this.#texterIcons.p,
+			tooltip : 'Paragraph'
 		},
 		h1 : {
 			name : 'H1',
 			class : 'h1-btn',
 			type : this.#textEditorConfig.featureType.newLineFeature,
-			content : `
-			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-type-h1" viewBox="0 0 16 16">
-			  <path d="M8.637 13V3.669H7.379V7.62H2.758V3.67H1.5V13h1.258V8.728h4.62V13h1.259zm5.329 0V3.669h-1.244L10.5 5.316v1.265l2.16-1.565h.062V13h1.244z"/>
-			</svg>
-			`,
+			content : this.#texterIcons.h1,
+			tooltip : 'Big heading'
 		},
 		h2 : {
 			name : 'H2',
 			class : 'h2-btn',
 			type : this.#textEditorConfig.featureType.newLineFeature,
-			content : `
-			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-type-h2" viewBox="0 0 16 16">
-			  <path d="M7.638 13V3.669H6.38V7.62H1.759V3.67H.5V13h1.258V8.728h4.62V13h1.259zm3.022-6.733v-.048c0-.889.63-1.668 1.716-1.668.957 0 1.675.608 1.675 1.572 0 .855-.554 1.504-1.067 2.085l-3.513 3.999V13H15.5v-1.094h-4.245v-.075l2.481-2.844c.875-.998 1.586-1.784 1.586-2.953 0-1.463-1.155-2.556-2.919-2.556-1.941 0-2.966 1.326-2.966 2.74v.049h1.223z"/>
-			</svg>
-			`,
+			content : this.#texterIcons.h2,
+			tooltip : 'Medium heading',
 		},
 		h3 : {
 			name : 'H3',
 			class : 'h3-btn',
 			type : this.#textEditorConfig.featureType.newLineFeature,
-			content : `
-			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-type-h3" viewBox="0 0 16 16">
-			  <path d="M7.637 13V3.669H6.379V7.62H1.758V3.67H.5V13h1.258V8.728h4.62V13h1.259zm3.625-4.272h1.018c1.142 0 1.935.67 1.949 1.674.013 1.005-.78 1.737-2.01 1.73-1.08-.007-1.853-.588-1.935-1.32H9.108c.069 1.327 1.224 2.386 3.083 2.386 1.935 0 3.343-1.155 3.309-2.789-.027-1.51-1.251-2.16-2.037-2.249v-.068c.704-.123 1.764-.91 1.723-2.229-.035-1.353-1.176-2.4-2.954-2.385-1.873.006-2.857 1.162-2.898 2.358h1.196c.062-.69.711-1.299 1.696-1.299.998 0 1.695.622 1.695 1.525.007.922-.718 1.592-1.695 1.592h-.964v1.074z"/>
-			</svg>
-			`,
+			content : this.#texterIcons.h3,
+			tooltip : 'Small heading'
 		},
+		D1 : 'divider',
 		boldText : {
 			name : 'STRONG',
 			class : 'boldText-btn',
 			type : this.#textEditorConfig.featureType.inlineFeature,
-			content : `
-			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-type-bold" viewBox="0 0 16 16">
-				<path d="M8.21 13c2.106 0 3.412-1.087 3.412-2.823 0-1.306-.984-2.283-2.324-2.386v-.055a2.176 2.176 0 0 0 1.852-2.14c0-1.51-1.162-2.46-3.014-2.46H3.843V13H8.21zM5.908 4.674h1.696c.963 0 1.517.451 1.517 1.244 0 .834-.629 1.32-1.73 1.32H5.908V4.673zm0 6.788V8.598h1.73c1.217 0 1.88.492 1.88 1.415 0 .943-.643 1.449-1.832 1.449H5.907z"/>
-			</svg>
-			`,
+			content : this.#texterIcons.boldText,
+			tooltip : 'Bold text'
 		},
 		italicText : {
 			name : 'I',
 			class : 'italicText-btn',
 			type : this.#textEditorConfig.featureType.inlineFeature,
-			content : `
-			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-type-italic" viewBox="0 0 16 16">
-			  <path d="M7.991 11.674 9.53 4.455c.123-.595.246-.71 1.347-.807l.11-.52H7.211l-.11.52c1.06.096 1.128.212 1.005.807L6.57 11.674c-.123.595-.246.71-1.346.806l-.11.52h3.774l.11-.52c-1.06-.095-1.129-.211-1.006-.806z"/>
-			</svg>
-			`,
+			content : this.#texterIcons.italicText,
+			tooltip : 'Italic text'
 		},
+		underlinedText : {
+			name : 'U',
+			class : 'underlinedText-btn',
+			type : this.#textEditorConfig.featureType.inlineFeature,
+			content : this.#texterIcons.underlinedText,
+			tooltip : 'Underlined text'
+		},
+		D2 : 'divider',
 		unorderedlists : {
 			name : 'UL',
 			class : 'unorderedlists-btn',
 			type : this.#textEditorConfig.featureType.newLineFeature,
-			content : `
-			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-list-task" viewBox="0 0 16 16">
-			  <path fill-rule="evenodd" d="M2 2.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5V3a.5.5 0 0 0-.5-.5H2zM3 3H2v1h1V3z"/>
-			  <path d="M5 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM5.5 7a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1h-9zm0 4a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1h-9z"/>
-			  <path fill-rule="evenodd" d="M1.5 7a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5H2a.5.5 0 0 1-.5-.5V7zM2 7h1v1H2V7zm0 3.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5H2zm1 .5H2v1h1v-1z"/>
-			</svg>
-			`,
+			content : this.#texterIcons.unorderedlists,
+			tooltip : 'Bullet list'
 		},
 		orderedlists : {
 			name : 'OL',
 			class : 'orderedlists-btn',
 			type : this.#textEditorConfig.featureType.newLineFeature,
-			content : `
-			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-list-ol" viewBox="0 0 16 16">
-			  <path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5z"/>
-			  <path d="M1.713 11.865v-.474H2c.217 0 .363-.137.363-.317 0-.185-.158-.31-.361-.31-.223 0-.367.152-.373.31h-.59c.016-.467.373-.787.986-.787.588-.002.954.291.957.703a.595.595 0 0 1-.492.594v.033a.615.615 0 0 1 .569.631c.003.533-.502.8-1.051.8-.656 0-1-.37-1.008-.794h.582c.008.178.186.306.422.309.254 0 .424-.145.422-.35-.002-.195-.155-.348-.414-.348h-.3zm-.004-4.699h-.604v-.035c0-.408.295-.844.958-.844.583 0 .96.326.96.756 0 .389-.257.617-.476.848l-.537.572v.03h1.054V9H1.143v-.395l.957-.99c.138-.142.293-.304.293-.508 0-.18-.147-.32-.342-.32a.33.33 0 0 0-.342.338v.041zM2.564 5h-.635V2.924h-.031l-.598.42v-.567l.629-.443h.635V5z"/>
-			</svg>
-			`,
+			content : this.#texterIcons.orderedlists,
+			tooltip : 'Numbered list'
 		},
+		D3 : 'divider',
 		tables : {
 			name : 'TABLE',
 			class : 'tables-btn',
 			type : this.#textEditorConfig.featureType.customFeature,
-			content : `
-			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-table" viewBox="0 0 16 16">
-			  <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zm-5 3v-3H6v3h4zm-5 0v-3H1v2a1 1 0 0 0 1 1h3zm-4-4h4V8H1v3zm0-4h4V4H1v3zm5-3v3h4V4H6zm4 4H6v3h4V8z"/>
-			</svg>
-			`,
+			content : this.#texterIcons.tables,
+			tooltip : 'Table'
 		},
 		image : {
 			name : 'IMG',
 			class : 'image-btn',
 			type : this.#textEditorConfig.featureType.customFeature,
-			content : `
-			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-image" viewBox="0 0 16 16">
-			  <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
-			  <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
-			</svg>
-			`,
+			content : this.#texterIcons.image,
+			tooltip : 'Image'
 		}
 	};
 
@@ -223,23 +282,40 @@ class Texter
 
 		// Create option menu
 		this.#texterMenu = document.createElement('div');
-
 		this.#texterMenu.classList.add('texter-option-menu');
 
+		let menuPanel = document.createElement('div');
+		menuPanel.classList.add('menu-panel');
 
 		// Set menu items
 		for(let firstlevelItem in this.#textEditorFeatures)
 		{
+			if (this.#textEditorFeatures[firstlevelItem] == 'divider') 
+			{
+				let divider = document.createElement('span');
+				divider.classList.add('menu-divider');
+				menuPanel.appendChild(divider);
+				continue;
+			}
+
+
 			let itemElem = document.createElement('span');
 
 			itemElem.classList.add('first-level-item');
 			itemElem.classList.add(this.#textEditorFeatures[firstlevelItem].class);
 			itemElem.setAttribute('type', 'button');
 			itemElem.setAttribute('feature-key', firstlevelItem)
+			itemElem.setAttribute('title', this.#textEditorFeatures[firstlevelItem].tooltip)
 			itemElem.innerHTML = this.#textEditorFeatures[firstlevelItem].content;	
 
-			this.#texterMenu.appendChild(itemElem);	
+			let itemContainer = document.createElement('span');
+			itemContainer.classList.add('menu-item-container');
+			itemContainer.appendChild(itemElem);
+
+			menuPanel.appendChild(itemContainer);	
 		}
+
+		this.#texterMenu.appendChild(menuPanel);
 
 
 		// Create text editor
@@ -247,12 +323,8 @@ class Texter
 
 		this.#texterEditor.classList.add('texter-text-editor');
 		this.#texterEditor.setAttribute('contenteditable', 'true');
+		this.#texterEditor.setAttribute('autofocus', 'true');
 		this.#texterEditor.style.height = this.userConfig.config.height;
-
-
-		// Create texter deafult paragraph tag
-		let p = document.createElement('p');
-		p.appendChild(document.createElement('br'));
 
 
 		/* TEST CODE { */
@@ -263,7 +335,6 @@ class Texter
 
 
 		// Nest elements	
-		if (!this.#texterEditor.childNodes.length) this.#texterEditor.appendChild(p);
 		this.#texterContainer.appendChild(this.#texterMenu);
 		this.#texterContainer.appendChild(this.#texterEditor);
 
@@ -289,19 +360,22 @@ class Texter
 		// Set p as default
 		document.execCommand('defaultParagraphSeparator', false, 'p');
 
+
+		this.#texterContainer.addEventListener('click', evt => {
+			this.manageCustomFeatureOptions(evt.target);
+		});
+
+
 		// Event array to be added to texterEditor
 		let editorEvt = ['keyup', 'mouseup', 'focusin'];
-
 
 		// Add listeners to texterEditor
 		editorEvt.forEach(evtName => {
 
 			this.#texterEditor.addEventListener(evtName, evt => {
 
-
 				// Set <p> as default new line tag
 				this.setParagraphAsDefault(evt);	
-
 				
 				// Get current selection and range 
 				let currentSelection = window.getSelection();
@@ -351,6 +425,217 @@ class Texter
 
 
 	/**
+	 * @function : createImageOptions
+	 * @purpose : To create the floating option menu 
+	 * for image feature
+	 * =====================================================*/
+
+	createImageOptions = (imgNode) =>
+	{
+		let imgOptions = document.createElement('SPAN');
+		imgOptions.contentEditable = false;
+		imgOptions.classList.add('image-options');
+
+		let divider = document.createElement('SPAN')
+		divider.classList.add('custom-feature-divider');
+
+
+		let alignLeftBtn = document.createElement('BUTTON');
+		alignLeftBtn.innerHTML = this.#texterIcons.alignLeft;
+		alignLeftBtn.setAttribute('feature', 'img-left');
+		alignLeftBtn.setAttribute('title', 'Algin left');
+		imgOptions.appendChild(alignLeftBtn);
+		
+		let alignCenterBtn = document.createElement('BUTTON');
+		alignCenterBtn.innerHTML = this.#texterIcons.alignCenter;
+		alignCenterBtn.setAttribute('feature', 'img-center');
+		alignCenterBtn.setAttribute('title', 'Align center');
+		imgOptions.appendChild(alignCenterBtn);
+
+		let alignRightBtn = document.createElement('BUTTON');
+		alignRightBtn.innerHTML = this.#texterIcons.alignRight;
+		alignRightBtn.setAttribute('feature', 'img-right');
+		alignRightBtn.setAttribute('title', 'Align right');
+		imgOptions.appendChild(alignRightBtn);
+
+		imgOptions.appendChild(divider.cloneNode(true));
+
+
+		let fullSizeBtn = document.createElement('BUTTON');
+		fullSizeBtn.innerText = '100%';
+		fullSizeBtn.setAttribute('feature', 'img-full');
+		fullSizeBtn.setAttribute('title', 'Full size image');
+		imgOptions.appendChild(fullSizeBtn);
+
+		let halfSizeBtn = document.createElement('BUTTON');
+		halfSizeBtn.innerText = '50%';
+		halfSizeBtn.setAttribute('feature', 'img-half');
+		halfSizeBtn.setAttribute('title', 'Half size image');
+		imgOptions.appendChild(halfSizeBtn);
+
+		let quaterSizeBtn = document.createElement('BUTTON');
+		quaterSizeBtn.innerText = '25%';
+		quaterSizeBtn.setAttribute('feature', 'img-quarter');
+		quaterSizeBtn.setAttribute('title', 'Qauter size image');
+		imgOptions.appendChild(quaterSizeBtn);
+
+		imgOptions.appendChild(divider.cloneNode(true));
+
+
+		let closeBtn = document.createElement('BUTTON');
+		closeBtn.innerHTML = this.#texterIcons.close;
+		closeBtn.setAttribute('feature', 'img-close');
+		closeBtn.setAttribute('title', 'Remove image');
+		imgOptions.appendChild(closeBtn);
+
+		imgNode.insertAdjacentElement('afterend', imgOptions);
+
+		this.addImageOptionListener(imgNode, imgOptions);
+	}
+
+
+
+	/**
+	 * @function : addImageOptionListeners
+	 * @purpose : To add event Listeners for 
+	 * all image options
+	 * ===========================================*/
+
+	addImageOptionListener = (imgNode, imgOptions) =>
+	{
+		let mainBlockNode = this.mainElement(imgNode, this.#textEditorConfig.elementType.block);
+		let mainInlineNode = imgNode.parentElement;
+		let imgOptionList = imgOptions.querySelectorAll('button');
+		console.log(imgOptionList);
+
+		let addAlignment = (alignClass) => 
+		{
+			['align-left', 'align-center', 'align-right'].forEach(alignClassItr => {
+				if (mainBlockNode.classList.contains(alignClassItr)) 
+					mainBlockNode.classList.remove(alignClassItr);
+			});
+
+			mainBlockNode.classList.add(alignClass);
+		}
+
+		let addSize = (sizeClass) => 
+		{
+			['full', 'half', 'quarter'].forEach(sizeClassItr => {
+				if (mainInlineNode.classList.contains(sizeClassItr)) 
+					mainInlineNode.classList.remove(sizeClassItr);
+			});
+
+			mainInlineNode.classList.add(sizeClass);			
+		}		
+
+
+		imgOptionList.forEach(imgFeatureBtn => {
+			let featureAttr = imgFeatureBtn.getAttribute('feature');
+
+			if (featureAttr) 
+			{
+				switch(featureAttr)
+				{
+					case 'img-left':
+						imgFeatureBtn.addEventListener('mouseup', evt => addAlignment('align-left'));
+					break;
+
+					case 'img-center':
+						imgFeatureBtn.addEventListener('mouseup', evt => addAlignment('align-center'));
+					break;
+
+					case 'img-right':
+						imgFeatureBtn.addEventListener('mouseup', evt => addAlignment('align-right'));
+					break;
+
+					case 'img-full':
+						imgFeatureBtn.addEventListener('mouseup', evt => addSize('full'));
+					break;
+
+					case 'img-half':
+						imgFeatureBtn.addEventListener('mouseup', evt => addSize('half'));
+					break;
+
+					case 'img-quarter':
+						imgFeatureBtn.addEventListener('mouseup', evt => addSize('quarter'));
+					break;
+
+					case 'img-close':
+						imgFeatureBtn.addEventListener('mouseup', evt => {
+							mainInlineNode.parentElement.removeChild(mainInlineNode);
+							mainBlockNode.removeAttribute('class');
+
+							if (!mainBlockNode.properText().length) 
+								mainBlockNode.parentElement.removeChild('mainBlockNode');
+						});
+					break;
+
+					default:
+						console.error('Unknown Image option passed for adding event listener');
+					break;
+				}
+			}
+		});
+	}
+
+
+
+	/**
+	 * @function : manageCustomFeatureOptions
+	 * @purpose : To check if a custom feature options needs 
+	 * to be activated 
+	 * ======================================================*/
+
+	manageCustomFeatureOptions = (targetNode) =>
+	{
+		if(this.#activeCustomFeatureNode != targetNode)
+		{
+			switch(this.#activeCustomFeature)
+			{
+				case 'IMG':
+					while(this.#activeCustomFeatureNode.nextSibling)
+						this.#activeCustomFeatureNode.parentElement.removeChild(this.#activeCustomFeatureNode.nextSibling);
+
+					while(this.#activeCustomFeatureNode.previousSibling)
+						this.#activeCustomFeatureNode.parentElement.removeChild(this.#activeCustomFeatureNode.previousSibling);
+				break;
+
+				case 'TABLE':
+					console.log('Table custom feature Options to be developed');
+				break;
+
+				default:
+					console.error('Unknown custom feature passed for deactivation');
+				break; 
+			}
+		}
+
+
+		if (targetNode.nodeName == 'IMG') 
+		{
+			this.createImageOptions(targetNode);
+
+			this.#activeCustomFeatureNode = targetNode;
+			this.#activeCustomFeature = targetNode.nodeName;	
+		}
+		else if (targetNode.nodeName == 'TABLE')
+		{
+			console.log('Activate Table feature - To be developed');
+		
+			this.#activeCustomFeatureNode = targetNode;
+			this.#activeCustomFeature = targetNode.nodeName;
+		}
+		else
+		{
+			console.log('Deactivate all custom feature - To be developed');
+
+			this.#activeCustomFeatureNode = null;
+			this.#activeCustomFeature = null;
+		}
+	}	
+
+
+	/**
 	 * @function : getElementType 
 	 * @purpose : To get if the element in 
 	 * block or inline level
@@ -381,20 +666,11 @@ class Texter
 		
 		let currentRange = currentSelection.getRangeAt(0);
 
-		if (this.#texterEditor.textContent.length == 0) 
+		if (this.#texterEditor.properText().length == 0 && this.#texterEditor.childNodes.length == 0) 
 		{
-			let p = null;
-
-			if (this.#texterEditor.firstChild) 
-			{
-				p = this.#texterEditor.firstChild
-			}
-			else
-			{
-				p = document.createElement('p');
-				p.appendChild(document.createElement('br'));
-				this.#texterEditor.appendChild(p);
-			}
+			let p = document.createElement('p');
+			p.appendChild(document.createElement('br'));
+			this.#texterEditor.appendChild(p);
 
 			let newRange = document.createRange();
 			newRange.setStart(p.firstChild, 0);
@@ -543,7 +819,7 @@ class Texter
 	{
 		if (element.nodeType == 1) 
 		{
-			let nodeName = element.nodeName;
+				let nodeName = element.nodeName;
 
 			if (nodeName in tagObj) 
 				tagObj[nodeName]++;
@@ -1172,7 +1448,7 @@ class Texter
 				}
 				else console.log('New feature cant be implemented on custom feature');
 			}
-			else
+			else if (generalTags.includes(featureTag))
 			{
 				if (listTags.includes(mainBlockNode.nodeName)) 
 				{
@@ -1207,7 +1483,8 @@ class Texter
 					else
 						mainBlockNode.parentElement.replaceChild(newElement, mainBlockNode);
 
-					newElement.parentElement.insertBefore(beforeLi, newElement);
+					if (beforeLi.childNodes.length) 
+						newElement.parentElement.insertBefore(beforeLi, newElement);
 
 					this.setCaretPosition(newElement, 0);
 				}
@@ -1224,6 +1501,7 @@ class Texter
 				}
 				else console.log('New feature cant be implemented on custom feature');
 			}
+			else console.log('New feature cant be implemented on custom feature');
 		}
 		else
 		{
@@ -1405,6 +1683,60 @@ class Texter
 
 
 	/**
+	 * @function : insertImage 
+	 * @purpose : To insert an image in texter text editor
+	 * =====================================================*/
+
+	insertImage = () =>
+	{
+		// Open select image prompt
+		let fileInput = document.createElement('INPUT');
+		fileInput.type = 'file';
+		fileInput.click();
+
+
+		// Add event listeners
+		fileInput.addEventListener('change', evt => {
+			if (!(evt.target.files && evt.target.files.length == 1)) return console.log('No file selected');
+
+			let uploadedFile = evt.target.files[0];
+			if (uploadedFile) 	
+			{
+				let fileReader = new FileReader();
+
+				fileReader.addEventListener('load', evt => {
+					let fileContent = evt.target.result;
+					let lastSelectionRange = this.getLastRange();
+
+					let newImage = document.createElement('IMG');
+					newImage.src = fileContent;
+
+					let newSpan = document.createElement('SPAN');
+					newSpan.contentEditable = false;
+					newSpan.classList.add('image-container');
+					newSpan.appendChild(newImage);
+
+					let newP = document.createElement('P');
+					newP.appendChild(newSpan);
+
+					if (lastSelectionRange) 
+					{
+						let mainBlockNode = this.mainElement(lastSelectionRange.endContainer, this.#textEditorConfig.elementType.block);
+						mainBlockNode.insertAdjacentElement('afterend', newP);
+					}
+					else
+						this.#texterEditor.appendChild(newP);
+
+
+				});
+
+				fileReader.readAsDataURL(uploadedFile);
+			}
+		});
+	}
+
+
+	/**
 	 * @function : activateFeature
 	 * @purpose : To activate a feature means
 	 * to apply it in the last selection range
@@ -1425,7 +1757,22 @@ class Texter
 			break;	
 
 			case this.#textEditorConfig.featureType.customFeature:
-				console.log('Custom Feature - To be developed');
+
+				switch(feature.name)
+				{
+					case 'IMG':
+						this.insertImage();	
+					break;
+
+					case 'TABLE':
+						this.inse
+					break;
+					
+					default:
+						console.error('Unknown custom feature is requested for activation');
+					break;	
+				}
+
 			break;					
 
 			default:
@@ -1566,7 +1913,7 @@ class Texter
 
 		for(let feature in this.#textEditorFeatures)
 		{
-			if (this.#textEditorFeatures[feature].name == element.nodeName && !this.#texterActiveInlineFeatures.find(activeFeature => activeFeature.nodeName == element.nodeName)) 
+			if (this.#textEditorFeatures[feature] && this.#textEditorFeatures[feature].name == element.nodeName && !this.#texterActiveInlineFeatures.find(activeFeature => activeFeature.nodeName == element.nodeName)) 
 			{
 				this.#texterActiveInlineFeatures.push({
 					featureName : feature,
@@ -1595,7 +1942,8 @@ class Texter
 		{
 			for(let feature in this.#textEditorFeatures)
 			{
-				if (this.#textEditorFeatures[feature].name == element.nodeName && 
+				if (this.#textEditorFeatures[feature] &&
+					this.#textEditorFeatures[feature].name == element.nodeName && 
 					!this.#texterActiveInlineFeatures.find(activeFeature => activeFeature.nodeName == element.nodeName)) 
 				{
 					this.#texterActiveInlineFeatures.push({
