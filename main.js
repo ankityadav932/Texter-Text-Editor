@@ -18,7 +18,7 @@ class Texter
 	#texterContainer = null;
 	#texterMenu = null;
 	#texterEditor = null;
-	#texterActiveInlineFeatures = [];
+	#texterActiveFeatures = [];
 	#texterActiveNewlineFeature = null;
 	#activeCustomFeature = null;
 	#activeCustomFeatureNode = null;
@@ -38,7 +38,8 @@ class Texter
 		featureType : {
 			inlineFeature : 1,
 			newLineFeature : 2,
-			customFeature : 3
+			customFeature : 3,
+			stylingFeature : 4,
 		},
 		elementType : {
 			inline : 1,
@@ -127,6 +128,11 @@ class Texter
 			  <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
 			</svg>
 		`,
+		add : `
+			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle-fill" viewBox="0 0 16 16">
+			  <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3v-3z"/>
+			</svg>
+		`
 	} 
 
 
@@ -198,6 +204,34 @@ class Texter
 			tooltip : 'Numbered list'
 		},
 		D3 : 'divider',
+		alignLeft : {
+			name : 'ALIGNMENT',
+			class : 'align-left-btn',
+			type : this.#textEditorConfig.featureType.stylingFeature,
+			styleClass : 'align-left',
+			content : this.#texterIcons.alignLeft,
+			tooltip : 'Align Left', 
+			level : this.#textEditorConfig.elementType.block
+		}
+,		alignCenter : {
+			name : 'ALIGNMENT',
+			class : 'align-center-btn',
+			type : this.#textEditorConfig.featureType.stylingFeature,
+			styleClass : 'align-center',
+			content : this.#texterIcons.alignCenter,
+			tooltip : 'Align Center', 
+			level : this.#textEditorConfig.elementType.block
+		},
+		alignright : {
+			name : 'ALIGNMENT',
+			class : 'align-right-btn',
+			type : this.#textEditorConfig.featureType.stylingFeature,
+			styleClass : 'align-right',
+			content : this.#texterIcons.alignRight,
+			tooltip : 'Align Right', 
+			level : this.#textEditorConfig.elementType.block
+		},
+		D4: 'divider',
 		tables : {
 			name : 'TABLE',
 			class : 'tables-btn',
@@ -284,6 +318,9 @@ class Texter
 		this.#texterMenu = document.createElement('div');
 		this.#texterMenu.classList.add('texter-option-menu');
 
+		let overflowScrollDiv = document.createElement('div');
+		overflowScrollDiv.classList.add('overflow-scroll');
+
 		let menuPanel = document.createElement('div');
 		menuPanel.classList.add('menu-panel');
 
@@ -300,7 +337,6 @@ class Texter
 
 
 			let itemElem = document.createElement('span');
-
 			itemElem.classList.add('first-level-item');
 			itemElem.classList.add(this.#textEditorFeatures[firstlevelItem].class);
 			itemElem.setAttribute('type', 'button');
@@ -308,14 +344,11 @@ class Texter
 			itemElem.setAttribute('title', this.#textEditorFeatures[firstlevelItem].tooltip)
 			itemElem.innerHTML = this.#textEditorFeatures[firstlevelItem].content;	
 
-			let itemContainer = document.createElement('span');
-			itemContainer.classList.add('menu-item-container');
-			itemContainer.appendChild(itemElem);
-
-			menuPanel.appendChild(itemContainer);	
+			menuPanel.appendChild(itemElem);
 		}
 
-		this.#texterMenu.appendChild(menuPanel);
+		overflowScrollDiv.appendChild(menuPanel);
+		this.#texterMenu.appendChild(overflowScrollDiv);
 
 
 		// Create text editor
@@ -329,7 +362,7 @@ class Texter
 
 		/* TEST CODE { */
 
-		// this.#texterEditor.innerHTML = testHTML;
+		// this.#texterEditor.innerHTML = 	testHTML;
 
 		/* TEST CODE } */
 
@@ -357,17 +390,68 @@ class Texter
 
 	addTexterListeners = () => 
 	{	
+		// Set menu item - Icon size
+		document.querySelectorAll('.first-level-item svg').forEach(svg => {
+			svg.setAttribute('width','25');
+			svg.setAttribute('height','25');
+		});
+
+
 		// Set p as default
 		document.execCommand('defaultParagraphSeparator', false, 'p');
 
 
-		this.#texterContainer.addEventListener('click', evt => {
-			this.manageCustomFeatureOptions(evt.target);
+		this.#texterContainer.addEventListener('mouseup', evt => {
+			
+			this.manageCustomFeatureOptions(evt.target);	
+			this.manageMenuOptions(evt.target)
+
+			
+			if (this.#texterEditor.contains(evt.target)) 
+			{
+				// Set <p> as default new line tag
+				this.setParagraphAsDefault(evt);	
+				
+				// Get current selection and range 
+				let currentSelection = window.getSelection();
+
+				if(currentSelection.rangeCount == 0) return;
+				
+				let currentRange = currentSelection.getRangeAt(0);
+
+				if (this.#texterEditor == currentRange.commonAncestorContainer || this.#texterEditor.contains(currentRange.commonAncestorContainer)) 
+				{
+					// Set Last range params
+					this.#lastSelection = {
+						startContainer : currentRange.startContainer,
+						endContainer : currentRange.endContainer,
+						startOffset : currentRange.startOffset,
+						endOffset : currentRange.endOffset,
+						collapsed : currentRange.collapsed
+					};
+
+
+					// Set Active features
+					this.setActiveFeatures();
+				}
+			}
+
+
+			// Add event listeners to menu feature buttons
+			if (this.#texterMenu.contains(evt.target)) 
+			{
+				let featureBtn = this.#texterMenu.querySelectorAll('span.first-level-item');
+
+				featureBtn.forEach(elem => {
+					if (elem == evt.target || elem.contains(evt.target))
+						this.changeFeatureState(elem.getAttribute('feature-key'));
+				});
+			}
 		});
 
 
 		// Event array to be added to texterEditor
-		let editorEvt = ['keyup', 'mouseup', 'focusin'];
+		let editorEvt = ['keyup', 'focusin'];
 
 		// Add listeners to texterEditor
 		editorEvt.forEach(evtName => {
@@ -409,17 +493,6 @@ class Texter
 			// Remove all empty Nodes 
 			// Remove all duplicate Nodes
 		});
-
-
-
-		// Add event listeners to menu feature buttons
-		let inlineFeatureBtnSelector = 'span.first-level-item';
-
-		this.#texterMenu.querySelectorAll(inlineFeatureBtnSelector).forEach(elem => {
-			elem.addEventListener('click', evt => {
-				this.changeFeatureState(elem.getAttribute('feature-key'));
-			});
-		});
 	}
 
 
@@ -432,6 +505,8 @@ class Texter
 
 	createImageOptions = (imgNode) =>
 	{
+		if (image.parentElement.querySelector('span.image-options')) return;
+
 		let imgOptions = document.createElement('SPAN');
 		imgOptions.contentEditable = false;
 		imgOptions.classList.add('image-options');
@@ -480,7 +555,6 @@ class Texter
 		imgOptions.appendChild(quaterSizeBtn);
 
 		imgOptions.appendChild(divider.cloneNode(true));
-
 
 		let closeBtn = document.createElement('BUTTON');
 		closeBtn.innerHTML = this.#texterIcons.close;
@@ -566,7 +640,7 @@ class Texter
 							mainBlockNode.removeAttribute('class');
 
 							if (!mainBlockNode.properText().length) 
-								mainBlockNode.parentElement.removeChild('mainBlockNode');
+								mainBlockNode.parentElement.removeChild(mainBlockNode);
 						});
 					break;
 
@@ -588,7 +662,7 @@ class Texter
 
 	manageCustomFeatureOptions = (targetNode) =>
 	{
-		if(this.#activeCustomFeatureNode != targetNode)
+		if(this.#activeCustomFeatureNode && this.#activeCustomFeatureNode != targetNode && !this.#activeCustomFeatureNode.contains(targetNode))
 		{
 			switch(this.#activeCustomFeature)
 			{
@@ -601,38 +675,39 @@ class Texter
 				break;
 
 				case 'TABLE':
-					console.log('Table custom feature Options to be developed');
+					if (this.#activeCustomFeatureNode.lastChild.nodeName == 'SPAN')
+						this.#activeCustomFeatureNode.removeChild(this.#activeCustomFeatureNode.lastChild);
 				break;
 
 				default:
 					console.error('Unknown custom feature passed for deactivation');
 				break; 
+
 			}
-		}
-
-
-		if (targetNode.nodeName == 'IMG') 
-		{
-			this.createImageOptions(targetNode);
-
-			this.#activeCustomFeatureNode = targetNode;
-			this.#activeCustomFeature = targetNode.nodeName;	
-		}
-		else if (targetNode.nodeName == 'TABLE')
-		{
-			console.log('Activate Table feature - To be developed');
-		
-			this.#activeCustomFeatureNode = targetNode;
-			this.#activeCustomFeature = targetNode.nodeName;
-		}
-		else
-		{
-			console.log('Deactivate all custom feature - To be developed');
 
 			this.#activeCustomFeatureNode = null;
 			this.#activeCustomFeature = null;
 		}
 	}	
+
+
+
+	/** 
+	 * @function : manageMenuOptions
+	 * @todo : To manage the options for the features
+	 * mentioned in the menu
+	 * ================================================*/
+
+	manageMenuOptions = (targetNode) => 
+	{
+		let itemSubMenu = document.querySelector('#item-sub-menu');
+
+		if (!itemSubMenu) return;
+
+		if (!(targetNode == itemSubMenu || itemSubMenu.contains(targetNode)))
+			itemSubMenu.parentElement.removeChild(itemSubMenu);
+	}
+
 
 
 	/**
@@ -650,6 +725,29 @@ class Texter
 		let elemStyle = element.currentStyle || window.getComputedStyle(element, ""); 
 		return elemStyle.display;
 	}
+
+
+
+	/**
+	 * @function : getElementPosition
+	 * @purpose : To get the computed position 
+	 * of an element
+	 * ================================================*/
+
+	getElementPosition = (element) => 
+	{
+		const elementViewPosition = element.getBoundingClientRect();
+		const elementOffsetParent = element.offsetParent;
+		const elementOffsetParentPosition = elementOffsetParent.getBoundingClientRect();
+
+		let offsetTop = Math.abs(elementViewPosition.top - elementOffsetParentPosition.top);
+		let offsetLeft = Math.abs(elementViewPosition.left - elementOffsetParentPosition.left);
+
+		return {
+		    left: offsetLeft + window.scrollX,
+		    top: offsetTop + window.scrollY
+		};
+	}	
 
 
 
@@ -1254,7 +1352,7 @@ class Texter
 
 
 			let itrChildNode = focusNode
-			for(let feature of this.#texterActiveInlineFeatures)
+			for(let feature of this.#texterActiveFeatures)
 			{
 				if (feature.featureType == this.#textEditorConfig.featureType.inlineFeature) 
 				{
@@ -1650,37 +1748,6 @@ class Texter
 	}
 
 
-	/**
-	 * @function : changeFeatureState
-	 * @purpose : To toggle a feature working status
-	 * if active then deactivate it
-	 * if deactive then activate it
-	 * ==========================================================*/
-
-	changeFeatureState = (feature) => 
-	{
-		let targetFeature = null;
-
-		if (!this.#lastSelection) return console.error('Editor was not in focus. No selection found');
-
-
-		for(let itrFeature of this.#texterActiveInlineFeatures)
-		{
-			if (itrFeature.featureName == feature)
-			{
-				targetFeature = itrFeature;
-				break;
-			} 
-		}
-
-
-		if (targetFeature) 
-			this.deActivateFeature(this.#textEditorFeatures[feature]);	
-		else
-			this.activateFeature(this.#textEditorFeatures[feature]);
-	}
-
-
 
 	/**
 	 * @function : insertImage 
@@ -1716,24 +1783,443 @@ class Texter
 					newSpan.classList.add('image-container');
 					newSpan.appendChild(newImage);
 
-					let newP = document.createElement('P');
-					newP.appendChild(newSpan);
+					let newDiv = document.createElement('div');
+					newDiv.contentEditable = false;
+					newDiv.appendChild(newSpan);
 
 					if (lastSelectionRange) 
 					{
 						let mainBlockNode = this.mainElement(lastSelectionRange.endContainer, this.#textEditorConfig.elementType.block);
-						mainBlockNode.insertAdjacentElement('afterend', newP);
+						mainBlockNode.insertAdjacentElement('afterend', newDiv);
 					}
 					else
-						this.#texterEditor.appendChild(newP);
+						this.#texterEditor.appendChild(newDiv);
 
+					let afterP = document.createElement('p');
+					afterP.appendChild(document.createElement('br'));
+					newDiv.insertAdjacentElement('afterend', afterP);
 
+					newImage.addEventListener('click', evt => {
+						this.createImageOptions(evt.target);
+						this.#activeCustomFeatureNode = evt.target;
+						this.#activeCustomFeature = evt.target.nodeName;	
+					})
 				});
 
 				fileReader.readAsDataURL(uploadedFile);
 			}
 		});
 	}
+
+
+
+	/**
+	 * @function : openMenuOptions
+	 * @purpose : To open the option UI for a menu item
+	 * ===================================================*/
+
+	openMenuOptions = (element, extraTop = 0, extraLeft = 0) =>
+	{
+		if (element.classList.contains('first-level-item')) 
+		{
+			let elementPos = this.getElementPosition(element);
+
+			let tableSubMenu = document.createElement('span');
+			tableSubMenu.classList.add('hide');
+			tableSubMenu.id = 'item-sub-menu';
+			tableSubMenu.style.left = elementPos.left + extraLeft + 'px';
+			tableSubMenu.style.top = elementPos.top + extraTop + 'px';
+			this.#texterMenu.appendChild(tableSubMenu);
+
+			return tableSubMenu;
+		}
+		else return null;
+	}
+
+
+
+	/**
+	 * @function : addTableOptionHandlers
+	 * @purpose : To add event Listeners to all 
+	 * the options(features) of the newly 
+	 * created table
+	 * ==============================================*/
+
+	addTableOptionHandlers = (table, tableOptions) =>
+	{
+		let tableFeaturesBtn = tableOptions.querySelectorAll('button');
+
+		let setTableAlignment = (alignment) =>
+		{
+			table.setAttribute('align', alignment);
+		}
+
+		let manageTableHeaders = (headerClass = false) =>
+		{
+			if (headerClass) 
+			{
+				switch(headerClass)
+				{
+					case 'row':
+						if (!table.classList.contains('header-row')) 
+							table.classList.add('header-row');
+					break;
+
+					case 'col':
+						if (!table.classList.contains('header-col')) 
+							table.classList.add('header-col');
+					break;
+
+					default:
+					break;
+				}
+			}
+			else
+			{
+				table.classList.remove('header-col');
+				table.classList.remove('header-row');
+			}
+		}
+
+		let addCol = () => 
+		{
+			let trList = table.querySelectorAll('tr');
+			let newTd = document.createElement('td');
+
+			trList.forEach(tr => {
+				tr.appendChild(newTd.cloneNode(true));
+			});
+		}
+
+		let addRow = () =>
+		{
+			let tr = table.querySelector('tr');
+			let tdCount = tr.childNodes.length;
+
+			let td = document.createElement('td');
+			tr = document.createElement('tr');
+
+			for (var i = 0; i < tdCount; i++) 
+				tr.appendChild(td.cloneNode());
+
+			if (table.lastChild.nodeName == 'SPAN') 
+				table.insertBefore(tr, table.lastChild);
+			else
+				table.appendChild(tr);
+		}
+
+
+		tableFeaturesBtn.forEach(featureBtn => {
+			switch(featureBtn.getAttribute('feature'))
+			{
+				case 'table-left':
+					featureBtn.addEventListener('click', evt => setTableAlignment('left'));
+				break;
+
+				case 'table-center':
+					featureBtn.addEventListener('click', evt => setTableAlignment('center'));
+				break;
+
+				case 'table-right':
+					featureBtn.addEventListener('click', evt => setTableAlignment('right'));
+				break;
+
+				case 'table-add-col':
+					featureBtn.addEventListener('click', evt => addCol());
+				break;
+
+				case 'table-add-row':
+					featureBtn.addEventListener('click', evt => addRow());
+				break;
+
+				case 'table-header-row':
+					featureBtn.addEventListener('click', evt => manageTableHeaders('row'));
+				break;
+
+				case 'table-header-col':
+					featureBtn.addEventListener('click', evt => manageTableHeaders('col'));
+				break;
+
+				case 'table-header-remove':
+					featureBtn.addEventListener('click', evt => manageTableHeaders());
+				break;
+
+				case 'table-close':
+					featureBtn.addEventListener('click', evt => {
+						table.parentElement.removeChild(table);
+					});
+				break;
+
+				default:
+					console.log('Unknow table feature passed');
+				break;
+			}
+		});
+	}
+
+
+	/**
+	 * @function : createTableOptions
+	 * @purpose : To open custom options for the 
+	 * newly created table
+	 * ==============================================*/
+
+	createTableOptions = (tableCell) =>
+	{
+		let table = tableCell;
+		while(table.nodeName != 'TABLE')
+			table = table.parentElement;	
+
+		if (table.querySelector('span.table-options')) return;
+
+		let tableOffset = this.getElementPosition(table);
+
+		let tableOptions = document.createElement('span');
+		tableOptions.contentEditable = false;
+		tableOptions.classList.add('table-options');
+		table.appendChild(tableOptions);
+
+		let divider = document.createElement('SPAN')
+		divider.classList.add('custom-feature-divider');
+
+		let alignLeftBtn = document.createElement('BUTTON');
+		alignLeftBtn.innerHTML = this.#texterIcons.alignLeft;
+		alignLeftBtn.setAttribute('feature', 'table-left');
+		alignLeftBtn.setAttribute('title', 'Algin left');
+		tableOptions.appendChild(alignLeftBtn);
+		
+		let alignCenterBtn = document.createElement('BUTTON');
+		alignCenterBtn.innerHTML = this.#texterIcons.alignCenter;
+		alignCenterBtn.setAttribute('feature', 'table-center');
+		alignCenterBtn.setAttribute('title', 'Align center');
+		tableOptions.appendChild(alignCenterBtn);
+
+		let alignRightBtn = document.createElement('BUTTON');
+		alignRightBtn.innerHTML = this.#texterIcons.alignRight;
+		alignRightBtn.setAttribute('feature', 'table-right');
+		alignRightBtn.setAttribute('title', 'Align right');
+		tableOptions.appendChild(alignRightBtn);
+
+		tableOptions.appendChild(divider.cloneNode(true));
+
+
+		let addColBtn = document.createElement('BUTTON');
+		addColBtn.innerHTML = this.#texterIcons.add + ' Column';
+		addColBtn.setAttribute('feature', 'table-add-col');
+		addColBtn.setAttribute('title', 'Add column to table');
+		tableOptions.appendChild(addColBtn);
+
+		let addRowBtn = document.createElement('BUTTON');
+		addRowBtn.innerHTML = this.#texterIcons.add + ' Row';
+		addRowBtn.setAttribute('feature', 'table-add-row');
+		addRowBtn.setAttribute('title', 'Add row to table');
+		tableOptions.appendChild(addRowBtn);
+
+		tableOptions.appendChild(divider.cloneNode(true));
+
+		let headerRowBtn = document.createElement('BUTTON');
+		headerRowBtn.innerHTML = 'Header Row';
+		headerRowBtn.setAttribute('feature', 'table-header-row');
+		headerRowBtn.setAttribute('title', 'Add header row to table');
+		tableOptions.appendChild(headerRowBtn);
+
+		let headerColBtn = document.createElement('BUTTON');
+		headerColBtn.innerHTML = 'Header Column';
+		headerColBtn.setAttribute('feature', 'table-header-col');
+		headerColBtn.setAttribute('title', 'Add header column to table');
+		tableOptions.appendChild(headerColBtn);	
+
+		let removeheaderBtn = document.createElement('BUTTON');
+		removeheaderBtn.innerHTML = 'Remove Header';
+		removeheaderBtn.setAttribute('feature', 'table-header-remove');
+		removeheaderBtn.setAttribute('title', 'Remove table headers');
+		tableOptions.appendChild(removeheaderBtn);	
+
+		tableOptions.appendChild(divider.cloneNode(true));
+
+		let closeBtn = document.createElement('BUTTON');
+		closeBtn.innerHTML = this.#texterIcons.close;
+		closeBtn.setAttribute('feature', 'table-close');
+		closeBtn.setAttribute('title', 'Remove table');
+		tableOptions.appendChild(closeBtn);
+
+		this.addTableOptionHandlers(table, tableOptions);
+	}
+
+
+
+	/**
+	 * @function : openNewTableOptions
+	 * @purpose : To open options UI for 
+	 * creating a new table
+	 * =============================================*/
+
+	openNewTableOptions = () =>
+	{
+		let tableBtn = this.#texterMenu.querySelector('.first-level-item.tables-btn');			
+		let subMenu = this.openMenuOptions(tableBtn, 40);
+
+		let demoTabledimension = 8;
+		let demoTable = document.createElement('table');
+		demoTable.classList.add('demo-table');
+
+		for (let i = 0; i < demoTabledimension; i++) 
+		{	
+			let tr = document.createElement('tr');
+
+			for (let j = 0; j < demoTabledimension; j++) 
+				tr.appendChild(document.createElement('td'));
+
+			demoTable.appendChild(tr);
+		}
+
+		subMenu.appendChild(demoTable);
+		subMenu.classList.remove('hide');
+
+
+		let tableCols = demoTable.querySelectorAll('td');
+
+		tableCols.forEach(col => {
+			col.addEventListener('mouseover', evt => {	
+				let tr = col.parentElement
+				let tdIndex = tr.childNodes.indexOf(col);
+				let trIndex = tr.parentElement.childNodes.indexOf(tr);
+
+				for (let i = 0; i < demoTabledimension; i++) 
+				{
+					for (let j = 0; j < demoTabledimension; j++) 
+					{
+						let itrNode = demoTable.childNodes[i].childNodes[j];
+
+						if (i <= trIndex && j <= tdIndex) 
+							itrNode.classList.add('selected');
+						else
+							if (itrNode.classList.contains('selected')) 
+								itrNode.classList.remove('selected');
+					}
+				}
+			});
+
+			col.addEventListener('click', evt => {	
+				let tr = col.parentElement
+				let tdIndex = tr.childNodes.indexOf(col);
+				let trIndex = tr.parentElement.childNodes.indexOf(tr);
+				let lastSelectionRange = this.getLastRange();
+				
+				trIndex++;
+				tdIndex++;		
+
+				let newTable = document.createElement('table');
+				newTable.classList.add('bordered')
+
+				for (let i = 0; i < trIndex; i++) 
+				{
+					let newTr = document.createElement('tr');
+
+					for (let j = 0; j < tdIndex; j++) 
+					{
+						let newTd = document.createElement('td');
+						newTr.appendChild(newTd);
+					}
+
+					newTable.appendChild(newTr);
+				}
+
+				let currNode = lastSelectionRange.endContainer;
+				let mainBlockNode = this.mainElement(currNode, this.#textEditorConfig.elementType.block);
+
+				mainBlockNode.insertAdjacentElement('afterend', newTable);
+
+				newTable.querySelectorAll('td, th').forEach(cell => {
+					cell.addEventListener('click', evt => {
+						this.createTableOptions(evt.target);
+						this.#activeCustomFeatureNode = newTable;
+						this.#activeCustomFeature = 'TABLE';
+					});
+				});
+
+				subMenu.parentElement.removeChild(subMenu);
+			});			
+		});
+	}
+
+
+	/**
+	 * @function : applyBlockLevelStyle
+	 * @purpose : To apply styles classes
+	 * to block level elements
+	 * =========================================*/
+
+	applyBlockLevelStyle = (feature) =>
+	{
+		const lastSelectionRange = this.getLastRange();
+
+		if (lastSelectionRange.collapsed) 
+		{
+			let mainBlockNode = this.mainElement(lastSelectionRange.startContainer, this.#textEditorConfig.elementType.block);
+
+			if (mainBlockNode)
+			{
+				let sameFeatureClasses = [];
+				let currNode = lastSelectionRange.startContainer;
+				let currOffset = lastSelectionRange.startOffset;
+
+				for(let itrfeature in this.#textEditorFeatures)
+					if (this.#textEditorFeatures[itrfeature].name == feature.name)
+						sameFeatureClasses.push(this.#textEditorFeatures[itrfeature].styleClass); 
+
+
+				switch(feature.name)
+				{
+					case 'ALIGNMENT':
+
+						sameFeatureClasses.forEach(className => {
+							if (mainBlockNode.classList.contains(className)) 
+								mainBlockNode.classList.remove(className);
+						});
+
+						mainBlockNode.classList.add(feature.styleClass);
+
+						this.setCaretPosition(currNode, currOffset);
+
+					break;
+				}
+			} 
+		}
+	}
+
+
+
+	/**
+	 * @function : changeFeatureState
+	 * @purpose : To toggle a feature working status
+	 * if active then deactivate it
+	 * if deactive then activate it
+	 * ==========================================================*/
+
+	changeFeatureState = (feature) => 
+	{
+		let targetFeature = null;
+
+		if (!this.#lastSelection) return console.error('Editor was not in focus. No selection found');
+
+
+		for(let itrFeature of this.#texterActiveFeatures)
+		{
+			if (itrFeature.featureName == feature)
+			{
+				targetFeature = itrFeature;
+				break;
+			} 
+		}
+
+
+		if (targetFeature) 
+			this.deActivateFeature(this.#textEditorFeatures[feature]);	
+		else
+			this.activateFeature(this.#textEditorFeatures[feature]);
+	}
+
 
 
 	/**
@@ -1765,7 +2251,7 @@ class Texter
 					break;
 
 					case 'TABLE':
-						this.inse
+						this.openNewTableOptions();
 					break;
 					
 					default:
@@ -1773,7 +2259,14 @@ class Texter
 					break;	
 				}
 
-			break;					
+			break;				
+
+			case this.#textEditorConfig.featureType.stylingFeature:
+				if (feature.level == this.#textEditorConfig.elementType.block) 
+					this.applyBlockLevelStyle(feature);
+				else
+					console.log('Only block level styles are developed till now');
+			break;	
 
 			default:
 				console.error('Unknown feature type');
@@ -1805,6 +2298,10 @@ class Texter
 
 			case this.#textEditorConfig.featureType.customFeature:
 				console.log('Custom Feature cannot be deactivated by menu. It has deactivation option within itself');
+			break;		
+
+			case this.#textEditorConfig.featureType.stylingFeature:
+				console.log('Custom Feature cannot be deactivated by menu. It has deactivation option within itself');
 			break;			
 
 			default:
@@ -1827,7 +2324,7 @@ class Texter
 
 		if (!lastSelectionRange) return console.log('Editor not in focus');
 
-		this.#texterActiveInlineFeatures = [];
+		this.#texterActiveFeatures = [];
 
 		this.#texterMenu.querySelectorAll('.first-level-item').forEach(elem => elem.classList.remove('active'));
 
@@ -1847,7 +2344,7 @@ class Texter
 			}
 
 
-			for (let feature in this.#texterActiveInlineFeatures) classSelectorStr += `.${this.#texterActiveInlineFeatures[feature].featureName}-btn, `; 
+			for (let feature in this.#texterActiveFeatures) classSelectorStr += `.${this.#texterActiveFeatures[feature].featureName}-btn, `; 
 
 			classSelectorStr = classSelectorStr.trim();	
 			classSelectorStr = classSelectorStr.slice(0, -1);
@@ -1857,7 +2354,7 @@ class Texter
 		else
 		{
 			let rangeElements = lastSelectionRange.cloneContents();
-			this.#texterActiveInlineFeatures = [];
+			this.#texterActiveFeatures = [];
 
 
 			// Get start container parents till main block element
@@ -1911,19 +2408,56 @@ class Texter
 	{
 		if (element.nodeType != 1) return console.error('Only HTML node will be accepted as paramter');
 
+		let lastSelectionRange = this.getLastRange();
+
 		for(let feature in this.#textEditorFeatures)
 		{
-			if (this.#textEditorFeatures[feature] && this.#textEditorFeatures[feature].name == element.nodeName && !this.#texterActiveInlineFeatures.find(activeFeature => activeFeature.nodeName == element.nodeName)) 
+			let featureObj = this.#textEditorFeatures[feature];
+
+			if (typeof featureObj == 'object' && featureObj.type) 
 			{
-				this.#texterActiveInlineFeatures.push({
-					featureName : feature,
-					nodeName : element.nodeName,
-					featureType : this.#textEditorFeatures[feature].type
-				});
+				let currfeatureType = featureObj.type;
 
-				let featureBtn = this.#texterMenu.querySelector(`.${this.#textEditorFeatures[feature].class}`);
+				switch(currfeatureType)
+				{
+					case this.#textEditorConfig.featureType.inlineFeature:
+					case this.#textEditorConfig.featureType.newLineFeature:
 
-				if (!featureBtn.classList.contains('active')) featureBtn.classList.add('active');
+						if (featureObj && featureObj.name == element.nodeName && !this.#texterActiveFeatures.find(activeFeature => activeFeature.nodeName == element.nodeName)) 
+						{
+							this.#texterActiveFeatures.push({
+								featureName : feature,
+								nodeName : element.nodeName,
+								featureType : featureObj.type
+							});
+
+							let featureBtn = this.#texterMenu.querySelector(`.${featureObj.class}`);
+
+							if (!featureBtn.classList.contains('active')) featureBtn.classList.add('active');
+						}
+					break;
+
+					case this.#textEditorConfig.featureType.stylingFeature:
+						let elementType = this.getElementType(element);
+
+						if (!lastSelectionRange.collapsed) return;
+
+						if (featureObj.level == this.#textEditorConfig.elementType.block && elementType == 'block' &&
+							element.classList.contains(featureObj.styleClass) &&
+							!this.#texterActiveFeatures.find(activeFeature => activeFeature.nodeName == featureObj.name)) 
+						{
+							this.#texterActiveFeatures.push({
+								featureName : feature,
+								nodeName : featureObj.name,
+								featureType : featureObj.type
+							});		
+
+							let featureBtn = this.#texterMenu.querySelector(`.${featureObj.class}`);
+
+							if (!featureBtn.classList.contains('active')) featureBtn.classList.add('active');										
+						}
+					break;
+				}
 			}
 		}		
 	}
@@ -1942,14 +2476,15 @@ class Texter
 		{
 			for(let feature in this.#textEditorFeatures)
 			{
-				if (this.#textEditorFeatures[feature] &&
-					this.#textEditorFeatures[feature].name == element.nodeName && 
-					!this.#texterActiveInlineFeatures.find(activeFeature => activeFeature.nodeName == element.nodeName)) 
+				let featureObj = this.#textEditorFeatures[feature];
+
+				if (featureObj && featureObj.name == element.nodeName && 
+					!this.#texterActiveFeatures.find(activeFeature => activeFeature.nodeName == element.nodeName)) 
 				{
-					this.#texterActiveInlineFeatures.push({
+					this.#texterActiveFeatures.push({
 						featureName : feature,
 						nodeName : element.nodeName,
-						featureType : this.#textEditorFeatures[feature].type
+						featureType : featureObj.type
 					});
 
 					this.#texterMenu.querySelector(`.${feature}-btn`).classList.add('active');
@@ -2026,15 +2561,14 @@ Node.prototype.properText = function ()
 }
 
 
+NodeList.prototype.indexOf = Array.prototype.indexOf;
+
+
 // Test Code -----------------------------------
 
 
 let testHTML = `
-	<p>asdaslddasd<big>asdlas<strong>sdlkjfslkdjflks</strong>jdlasdsad<i>asljdaljdsad</i>asdkhaskdhakshdka</big>skjdakhdasjhd</p>
-	<p>lsdjasdklada<big>asdasljdalsjdaljsdlkajsdaasdasdasd</big>asdasdasda</p>
-	<ul>
-		<li>aksdasd<big>ldkjaslkdjalsjda</big></li>
-	</ul>
+<p>alsdkjasljdlajdlasjdljasldjaslj</p>
 `;
 
 /*let testHTML = `

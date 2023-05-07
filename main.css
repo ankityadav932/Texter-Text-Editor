@@ -2,8 +2,13 @@
 /* VARIABLES */
 :root {
 	--themeColor : #1cc0f6;
-	--menuPanelBackground : #f6f6f6
+	--menuPanelBackground : #f6f6f6;
+	--customFeatureMenuBackgorund : #d8d8d8;
+	--tableHeaderBackground : gray
 }
+
+/* General classes */
+.hide { display:none; }
 
 /* Container */
 div.texter {
@@ -19,52 +24,91 @@ div.texter {
 /* Option menu */
 div.texter > div.texter-option-menu {
 	position: relative;
-	padding: 8px;
+	padding: 5px 10px;
 	background-color: var(--menuPanelBackground);
 	width: auto;
 	height: auto;
 	border-radius: 5px 5px 0 0;
-	overflow-y: auto;
 }
 
-div.texter > div.texter-option-menu > div.menu-panel > span.menu-divider {
-    width: 0;
-    height: auto;
-    margin: 0 5px;
-    border-left: 1px solid #9b9b9b;
+div.texter-option-menu > div.overflow-scroll {
+	overflow-x: auto;
 }
 
-div.texter > div.texter-option-menu > div.menu-panel {
+div.overflow-scroll > div.menu-panel {
 	display: flex;
 	width: 100%;
 	height: auto;
 	min-width: 500px;
-	margin: 5px 0;
 }
 
-div.texter-option-menu > div.menu-panel > span.menu-item-container {
-	margin: 0 2px;
+div.menu-panel > span.menu-divider {
+    width: 0;
+    height: auto;
+    margin: 0 5px;
+    border-left: 1.3px solid #9b9b9b;
 }
 
-div.texter-option-menu > div.menu-panel > span.menu-item-container > span.first-level-item {
-	padding: 7px 10px 10px;
+div.menu-panel > span.first-level-item {
+	position: static;
+	padding: 5px;
 	border-radius: 5px;
 	text-align: center;
 	cursor: grab;
+	margin: 0 3px;
 }
 
-div.texter-option-menu > div.menu-panel > span.menu-item-container > span.first-level-item > svg{
+div.menu-panel > span.first-level-item > svg{
 	vertical-align: middle;
 	display: inline-block;
 }
 
-div.texter-option-menu > div.menu-panel > span.menu-item-container > span.first-level-item:hover {
+div.menu-panel > span.first-level-item:hover {
 	background-color: #eeeeee;
 }
 
-div.texter-option-menu > div.menu-panel > span.menu-item-container > span.active {
+
+div.menu-panel > span.active {
 	background-color: var(--themeColor) !important;
 	color: #fff !important;	
+}
+
+span#item-sub-menu {
+ 	position: absolute;
+ 	padding: 5px;
+ 	background-color: var(--menuPanelBackground);
+ 	border-radius: 5px;
+ 	border: 1.3px solid var(--themeColor);
+ 	z-index: 5;
+}
+
+span#item-sub-menu::before {
+    content: '';
+    border: 2px solid;
+    position: absolute;
+    top: -11px;
+    left: 12px;
+    border-top: 5px solid transparent;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 5px solid var(--themeColor);
+}
+
+span#item-sub-menu > table.demo-table {
+
+}
+
+table.demo-table > tr {
+
+}
+
+table.demo-table > tr > td {
+    border: 1px solid;
+    padding: 5px;
+}
+
+table.demo-table > tr > td.selected {
+	background-color: var(--themeColor);
 }
 
 /* Text editor */
@@ -103,11 +147,11 @@ span.image-container{
 span.image-options {    
 	position: absolute;
 	display: flex;
-  bottom: -35px;
-  left: 0;
-  background-color: #d8d8d8;
-  padding: 5px;
-  border-radius: 5px;
+	top: 100%;
+	left: 0;
+	background-color: var(--customFeatureMenuBackgorund);
+	padding: 5px;
+	border-radius: 5px;
 }
 
 span.image-options > button {
@@ -117,6 +161,11 @@ span.image-options > button {
     border-radius: 2px;
     padding: 5px;
     font-weight: bold;
+}
+
+span.image-options > button > svg {
+	display: inline-block;
+	vertical-align: middle;
 }
 
 span.image-options > button:hover {
@@ -158,14 +207,97 @@ div.texter-text-editor span.quarter {
 	width: 25% !important;
 }
 
-div.texter-text-editor > p.align-left {
+div.texter-text-editor > div.align-left {
 	text-align: left;
 }
 
-div.texter-text-editor > p.align-right {
+div.texter-text-editor > div.align-right {
 	text-align: right;
 }
 
-div.texter-text-editor > p.align-center {
+div.texter-text-editor > div.align-center {
 	text-align: center;
+}
+
+
+div.texter-text-editor table {
+	position: relative;
+	border-collapse: collapse;
+}
+
+div.texter-text-editor table.header-col > tr > td:nth-of-type(1), div.texter-text-editor table.header-col > tr > th:nth-of-type(1) {
+	background-color: var(--tableHeaderBackground);
+	color: #fff;
+	font-weight: bold;
+}
+
+div.texter-text-editor table.header-row > tr:nth-of-type(1) {
+	background-color: var(--tableHeaderBackground);
+	color: #fff;
+	font-weight: bold;
+}
+
+
+div.texter-text-editor table td, div.texter-text-editor table th {
+	min-width: 100px;
+	height: 50px;
+	border: 1px solid;
+	padding: 5px;
+
+}
+
+span.table-options {
+	position: absolute;
+	display: flex;
+	background-color: var(--customFeatureMenuBackgorund);
+	z-index: 1;	
+	width: auto;
+	height: auto;
+	padding: 5px;
+	border-radius: 5px;
+	top: 101%;
+	left: 0;
+}
+
+span.table-options > button {
+    background-color: #fff;
+    border: navajowhite;
+    margin: 0px 2px;
+    border-radius: 2px;
+    padding: 5px;
+    font-weight: bold;
+    font-size: 10px;
+}
+
+span.table-options > button > svg {
+	display: inline-block;
+	vertical-align: middle;
+}
+
+span.table-options > button:hover {
+	background-color: var(--themeColor);
+	color : #fff;
+}
+
+button[feature="table-close"] {
+    color: red !important;
+}
+
+button[feature="table-close"]:hover {
+    color: #fff !important;
+    background-color: red !important;
+}
+
+
+/* Styling Classes */
+h1.align-left, h2.align-left, h3.align-left, p.align-left {
+	text-align: left;
+}
+
+h1.align-center, h2.align-center, h3.align-center, p.align-center {
+	text-align: center;
+}
+
+h1.align-right, h2.align-right, h3.align-right, p.align-right {
+	text-align: right;
 }
