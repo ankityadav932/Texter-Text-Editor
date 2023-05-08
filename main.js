@@ -1207,7 +1207,10 @@ class Texter
 					return null;
 				}
 
-				if (currNodeElementType == 'block' && currNode.parentElement == mainParent)
+				/* Old Condition*/
+				// if (currNodeElementType == 'block' && currNode.parentElement == mainParent)
+				
+				if (currNodeElementType != 'inline' && currNode.parentElement == mainParent)
 						return currNode; 
 
 				currNode = currNode.parentElement;
