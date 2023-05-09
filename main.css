@@ -211,7 +211,7 @@ div.texter-text-editor span.quarter {
 	width: 25% !important;
 }
 
-div.texter-text-editor > div.align-left {
+/*div.texter-text-editor > div.align-left {
 	text-align: left;
 }
 
@@ -221,7 +221,7 @@ div.texter-text-editor > div.align-right {
 
 div.texter-text-editor > div.align-center {
 	text-align: center;
-}
+}*/
 
 
 div.texter-text-editor table {
@@ -294,15 +294,71 @@ button[feature="table-close"]:hover {
 }
 
 
+/* ======================================================== */
 /* Styling Classes */
-h1.align-left, h2.align-left, h3.align-left, p.align-left {
+/* ======================================================== */
+
+
+/* Alignment */
+/*-----------*/
+
+div.texter-text-editor > h1,
+div.texter-text-editor > h2,
+div.texter-text-editor > h3,
+div.texter-text-editor > p,
+div.texter-text-editor > div
+{
+	width: 100%;
+}
+
+
+/* Block element */
+div.texter-text-editor > h1.align-left,
+div.texter-text-editor > h2.align-left,
+div.texter-text-editor > h3.align-left,
+div.texter-text-editor > p.align-left,
+div.texter-text-editor > div.align-left
+{
 	text-align: left;
 }
 
-h1.align-center, h2.align-center, h3.align-center, p.align-center {
+div.texter-text-editor > h1.align-center,
+div.texter-text-editor > h2.align-center,
+div.texter-text-editor > h3.align-center,
+div.texter-text-editor > p.align-center,
+div.texter-text-editor > div.align-center
+{
 	text-align: center;
 }
 
-h1.align-right, h2.align-right, h3.align-right, p.align-right {
-	text-align: right;
+div.texter-text-editor > h1.align-right, 
+div.texter-text-editor > h2.align-right,
+div.texter-text-editor > h3.align-right,
+div.texter-text-editor > p.align-right,
+div.texter-text-editor > div.align-right
+{
+	text-align: end;
+}
+
+
+/* Other elements */
+div.texter-text-editor > ul.align-left,
+div.texter-text-editor > ol.align-left,
+div.texter-text-editor > table.align-left
+{
+	align-self: flex-start;
+}
+
+div.texter-text-editor > ul.align-center,
+div.texter-text-editor > ol.align-center,
+div.texter-text-editor > table.align-center
+{
+	align-self: center;
+}
+
+div.texter-text-editor > ul.align-right, 
+div.texter-text-editor > ol.align-right,
+div.texter-text-editor > table.align-right
+{
+	align-self: flex-end;
 }

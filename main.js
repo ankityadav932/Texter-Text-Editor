@@ -205,7 +205,8 @@ class Texter
 		},
 		D3 : 'divider',
 		alignLeft : {
-			name : 'ALIGNMENT',
+			name : 'ALIGN-LEFT',
+			styleCategory : 'ALIGNMENT',
 			class : 'align-left-btn',
 			type : this.#textEditorConfig.featureType.stylingFeature,
 			styleClass : 'align-left',
@@ -214,7 +215,8 @@ class Texter
 			level : this.#textEditorConfig.elementType.block
 		}
 ,		alignCenter : {
-			name : 'ALIGNMENT',
+			name : 'ALIGN-CENTER',
+			styleCategory : 'ALIGNMENT',
 			class : 'align-center-btn',
 			type : this.#textEditorConfig.featureType.stylingFeature,
 			styleClass : 'align-center',
@@ -223,7 +225,8 @@ class Texter
 			level : this.#textEditorConfig.elementType.block
 		},
 		alignright : {
-			name : 'ALIGNMENT',
+			name : 'ALIGN-RIGHT',
+			styleCategory : 'ALIGNMENT',
 			class : 'align-right-btn',
 			type : this.#textEditorConfig.featureType.stylingFeature,
 			styleClass : 'align-right',
@@ -294,7 +297,11 @@ class Texter
 	 * @purpose : To clear the lastSelection property
 	 * ===============================================*/
 
-	clearLastSelection = () => { this.#lastSelection = null; }
+	clearLastSelection = () => 
+	{
+		window.getSelection().removeAllRanges();
+	 	this.#lastSelection = null; 
+	}
 
 
 
@@ -505,7 +512,7 @@ class Texter
 
 	createImageOptions = (imgNode) =>
 	{
-		if (image.parentElement.querySelector('span.image-options')) return;
+		if (imgNode.parentElement.querySelector('span.image-options')) return;
 
 		let imgOptions = document.createElement('SPAN');
 		imgOptions.contentEditable = false;
@@ -590,6 +597,8 @@ class Texter
 			});
 
 			mainBlockNode.classList.add(alignClass);
+
+			mainBlockNode.click()
 		}
 
 		let addSize = (sizeClass) => 
@@ -599,7 +608,9 @@ class Texter
 					mainInlineNode.classList.remove(sizeClassItr);
 			});
 
-			mainInlineNode.classList.add(sizeClass);			
+			mainInlineNode.classList.add(sizeClass);
+
+			imgNode.click();
 		}		
 
 
@@ -1804,6 +1815,8 @@ class Texter
 
 					newImage.addEventListener('click', evt => {
 						this.createImageOptions(evt.target);
+						this.clearLastSelection();
+						this.setActiveFeatures();
 						this.#activeCustomFeatureNode = evt.target;
 						this.#activeCustomFeature = evt.target.nodeName;	
 					})
@@ -1852,13 +1865,25 @@ class Texter
 	{
 		let tableFeaturesBtn = tableOptions.querySelectorAll('button');
 
-		let setTableAlignment = (alignment) =>
+		let setTableAlignment = (alignmentClass) =>
 		{
-			table.setAttribute('align', alignment);
+			let lastSelectionRange = this.getLastRange();
+			let sameFeatureClasses = ['align-left','align-center','align-right'];
+			
+			sameFeatureClasses.forEach(className => {
+				if (table.classList.contains(className))
+					table.classList.remove(className);
+			});
+
+			table.classList.add(alignmentClass);
+
+			this.setCaretPosition(lastSelectionRange.startContainer, lastSelectionRange.startOffset);
 		}
 
 		let manageTableHeaders = (headerClass = false) =>
 		{
+			let lastSelectionRange = this.getLastRange();
+
 			if (headerClass) 
 			{
 				switch(headerClass)
@@ -1882,20 +1907,26 @@ class Texter
 				table.classList.remove('header-col');
 				table.classList.remove('header-row');
 			}
+
+			this.setCaretPosition(lastSelectionRange.startContainer, lastSelectionRange.startOffset);
 		}
 
 		let addCol = () => 
 		{
+			let lastSelectionRange = this.getLastRange();
 			let trList = table.querySelectorAll('tr');
 			let newTd = document.createElement('td');
 
 			trList.forEach(tr => {
 				tr.appendChild(newTd.cloneNode(true));
-			});
+			});			
+
+			this.setCaretPosition(lastSelectionRange.startContainer, lastSelectionRange.startOffset);
 		}
 
 		let addRow = () =>
 		{
+			let lastSelectionRange = this.getLastRange();
 			let tr = table.querySelector('tr');
 			let tdCount = tr.childNodes.length;
 
@@ -1909,6 +1940,8 @@ class Texter
 				table.insertBefore(tr, table.lastChild);
 			else
 				table.appendChild(tr);
+
+			this.setCaretPosition(lastSelectionRange.startContainer, lastSelectionRange.startOffset);
 		}
 
 
@@ -1916,15 +1949,15 @@ class Texter
 			switch(featureBtn.getAttribute('feature'))
 			{
 				case 'table-left':
-					featureBtn.addEventListener('click', evt => setTableAlignment('left'));
+					featureBtn.addEventListener('click', evt => setTableAlignment('align-left'));
 				break;
 
 				case 'table-center':
-					featureBtn.addEventListener('click', evt => setTableAlignment('center'));
+					featureBtn.addEventListener('click', evt => setTableAlignment('align-center'));
 				break;
 
 				case 'table-right':
-					featureBtn.addEventListener('click', evt => setTableAlignment('right'));
+					featureBtn.addEventListener('click', evt => setTableAlignment('align-right'));
 				break;
 
 				case 'table-add-col':
@@ -1949,7 +1982,10 @@ class Texter
 
 				case 'table-close':
 					featureBtn.addEventListener('click', evt => {
+						let previousElement = table.previousElementSibling;
 						table.parentElement.removeChild(table);
+
+						this.setCaretPosition(previousElement, 0);
 					});
 				break;
 
@@ -2147,47 +2183,97 @@ class Texter
 	}
 
 
+
 	/**
-	 * @function : applyBlockLevelStyle
-	 * @purpose : To apply styles classes
-	 * to block level elements
+	 * @function : applyStyleToElement
+	 * @todo : To apply style class 
+	 * to a specific element
 	 * =========================================*/
 
-	applyBlockLevelStyle = (feature) =>
+	applyStyleToElement = (feature, element) => 
+	{
+		if (feature.type == this.#textEditorConfig.featureType.stylingFeature) 
+		{
+			let sameFeatureClasses = [];
+
+			for(let itrfeature in this.#textEditorFeatures)
+				if (this.#textEditorFeatures[itrfeature].styleCategory == feature.styleCategory	)
+					sameFeatureClasses.push(this.#textEditorFeatures[itrfeature].styleClass); 
+
+			switch(feature.styleCategory)
+			{
+				case 'ALIGNMENT':
+
+					sameFeatureClasses.forEach(className => {
+						if (element.classList.contains(className)) 
+							element.classList.remove(className);
+					});
+
+					element.classList.add(feature.styleClass);
+
+				break;
+			}		
+		}
+	}
+
+
+	/**
+	 * @function : applyStyles
+	 * @purpose : To apply styles classes
+	 * to elements
+	 * =========================================*/
+
+	applyStyles = (feature) =>
 	{
 		const lastSelectionRange = this.getLastRange();
 
 		if (lastSelectionRange.collapsed) 
 		{
-			let mainBlockNode = this.mainElement(lastSelectionRange.startContainer, this.#textEditorConfig.elementType.block);
-
-			if (mainBlockNode)
+			if (feature.level == this.#textEditorConfig.elementType.block) 
 			{
-				let sameFeatureClasses = [];
 				let currNode = lastSelectionRange.startContainer;
-				let currOffset = lastSelectionRange.startOffset;
+				let currOffset = lastSelectionRange.startOffset;	
+				let mainBlockNode = this.mainElement(currNode, this.#textEditorConfig.elementType.block);
 
-				for(let itrfeature in this.#textEditorFeatures)
-					if (this.#textEditorFeatures[itrfeature].name == feature.name)
-						sameFeatureClasses.push(this.#textEditorFeatures[itrfeature].styleClass); 
-
-
-				switch(feature.name)
-				{
-					case 'ALIGNMENT':
-
-						sameFeatureClasses.forEach(className => {
-							if (mainBlockNode.classList.contains(className)) 
-								mainBlockNode.classList.remove(className);
-						});
-
-						mainBlockNode.classList.add(feature.styleClass);
-
-						this.setCaretPosition(currNode, currOffset);
-
-					break;
+				if (mainBlockNode)
+				{	
+					this.applyStyleToElement(feature, mainBlockNode)
+					this.setCaretPosition(currNode, currOffset);
 				}
 			} 
+			// else for inline feature styling
+		}
+		else
+		{
+			if (feature.level == this.#textEditorConfig.elementType.block) 
+			{
+				let beginNode = lastSelectionRange.startContainer;
+				let beginOffset = lastSelectionRange.startOffset;
+				beginNode = this.mainElement(beginNode, this.#textEditorConfig.elementType.block);
+
+				this.applyStyleToElement(feature, beginNode);
+
+				
+				let endNode = lastSelectionRange.endContainer;
+				let endOffset = lastSelectionRange.endOffset;
+				endNode = this.mainElement(endNode, this.#textEditorConfig.elementType.block);
+
+				this.applyStyleToElement(feature, endNode);
+
+				if (beginNode != endNode) 
+				{		
+					let currNode = beginNode.nextSibling;
+					while(currNode != endNode)
+					{
+						currNode = this.mainElement(currNode, this.#textEditorConfig.elementType.block);
+						this.applyStyleToElement(feature, currNode)
+						currNode = currNode.nextSibling;
+					}
+				}
+
+				this.setCaretPosition(beginNode, 0);
+			}			
+			// else for inline feature styling
 		}
 	}
 
@@ -2266,7 +2352,7 @@ class Texter
 
 			case this.#textEditorConfig.featureType.stylingFeature:
 				if (feature.level == this.#textEditorConfig.elementType.block) 
-					this.applyBlockLevelStyle(feature);
+					this.applyStyles(feature);
 				else
 					console.log('Only block level styles are developed till now');
 			break;	
@@ -2325,11 +2411,10 @@ class Texter
 	{
 		let lastSelectionRange = this.getLastRange();
 
-		if (!lastSelectionRange) return console.log('Editor not in focus');
-
 		this.#texterActiveFeatures = [];
-
 		this.#texterMenu.querySelectorAll('.first-level-item').forEach(elem => elem.classList.remove('active'));
+
+		if (!lastSelectionRange) return console.log('Editor not in focus');
 
 		if (lastSelectionRange.collapsed) 
 		{
@@ -2345,14 +2430,6 @@ class Texter
 
 				currNode = currNode.parentElement;
 			}
-
-
-			for (let feature in this.#texterActiveFeatures) classSelectorStr += `.${this.#texterActiveFeatures[feature].featureName}-btn, `; 
-
-			classSelectorStr = classSelectorStr.trim();	
-			classSelectorStr = classSelectorStr.slice(0, -1);
-
-			if (classSelectorStr) this.#texterMenu.querySelectorAll(classSelectorStr).forEach(elem => elem.classList.add('active'));
 		}	
 		else
 		{
@@ -2438,14 +2515,15 @@ class Texter
 
 							if (!featureBtn.classList.contains('active')) featureBtn.classList.add('active');
 						}
+
 					break;
 
 					case this.#textEditorConfig.featureType.stylingFeature:
+
 						let elementType = this.getElementType(element);
 
-						if (!lastSelectionRange.collapsed) return;
-
-						if (featureObj.level == this.#textEditorConfig.elementType.block && elementType == 'block' &&
+						if (featureObj.level == this.#textEditorConfig.elementType.block && 
+							elementType != 'inline' &&
 							element.classList.contains(featureObj.styleClass) &&
 							!this.#texterActiveFeatures.find(activeFeature => activeFeature.nodeName == featureObj.name)) 
 						{
@@ -2459,6 +2537,7 @@ class Texter
 
 							if (!featureBtn.classList.contains('active')) featureBtn.classList.add('active');										
 						}
+
 					break;
 				}
 			}
