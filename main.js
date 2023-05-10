@@ -800,9 +800,25 @@ class Texter
 
 	unNestElements = (node, offset, tagName, targetElement) => 
 	{
-		// Validate node 
-		if (node.nodeType != 3) 
-			return console.error('Non text node has been passed for un-nesting')
+		// Validate for allowed node types
+		if (![1,3].includes(node.nodeType)) 
+			return console.error('Node of unknown type has been passed for un-nesting');
+
+		// Check if empty Html element is passed
+		if (node.nodeType == 1)
+		{
+			if (!(node.properText() && node.properText().length)) 
+			{
+				let emptyTextNode = document.createTextNode(Texter.#emptyText);
+				node.appendChild(emptyTextNode);
+
+				node = emptyTextNode;
+				offset = 0;
+			}
+			else
+				return console.error('Non empty HTML node has been passed for un-nesting')
+		} 
+
 		
 		// Get current node child after and before selection range
 		let beforeSelection = document.createTextNode(node.nodeValue.slice(0, offset));
@@ -956,7 +972,6 @@ class Texter
 	}
 
 
-
 	/**
 	 * @function : insertInlineTag
 	 * @purpose : To insert an HTML element according
@@ -1074,7 +1089,6 @@ class Texter
 					while(currElement.parentElement != commonParent)
 					{
 						let currElemParent = currElement.parentElement;
-						newElement = document.createElement(elementTag);
 						currElement = currElement.nextSibling;
 
 						while(currElement)
@@ -1083,13 +1097,28 @@ class Texter
 							currElement = currElement.nextSibling;
 
 							if (tempNode.properText() && tempNode.properText().length)
-								newElement.appendChild(tempNode);
+							{
+								let elemType = this.getElementType(tempNode);
+								newElement = document.createElement(elementTag);
+
+								if (elemType == 'inline') 
+								{
+									let tempNodeClone = tempNode.cloneNode(true);
+									newElement.appendChild(tempNodeClone);
+
+									currElemParent.replaceChild(newElement, tempNode);
+								}
+								else
+								{
+									while(tempNode.firstChild)
+										newElement.appendChild(tempNode.firstChild);
+
+									tempNode.appendChild(newElement);
+								}
+							}
 							else
 								tempNode.parentElement.removeChild(tempNode);
 						}
-
-						if (newElement.properText() && newElement.properText().length) 
-							currElemParent.appendChild(newElement);
 
 						currElement = currElemParent;
 					}
@@ -1119,7 +1148,6 @@ class Texter
 					while(currElement.parentElement != commonParent)
 					{
 						let currElemParent = currElement.parentElement;
-						newElement = document.createElement(elementTag);
 						currElement = currElement.previousSibling;
 
 						while(currElement)
@@ -1128,13 +1156,28 @@ class Texter
 							currElement = currElement.previousSibling;
 
 							if (tempNode.properText() && tempNode.properText().length)
-								newElement.appendChild(tempNode);
+							{
+								newElement = document.createElement(elementTag);
+								let elemType = this.getElementType(tempNode);
+
+								if (elemType == 'inline') 
+								{
+									let tempNodeClone = tempNode.cloneNode(true);
+									newElement.appendChild(tempNodeClone);
+
+									currElemParent.replaceChild(newElement, tempNode);
+								}
+								else
+								{
+									while(tempNode.firstChild)
+										newElement.appendChild(tempNode.firstChild);
+
+									tempNode.appendChild(newElement);
+								}
+							}
 							else
 								tempNode.parentElement.removeChild(tempNode);
 						}
-
-						if (newElement.properText() && newElement.properText().length)
-							currElemParent.insertBefore(newElement, currElemParent.firstChild);
 
 						currElement = currElemParent;
 					}
@@ -1157,7 +1200,7 @@ class Texter
 							let currElemType = this.getElementType(tempNode);
 							newElement = document.createElement(elementTag);
 
-							if (currElemType == 'block') 
+							if (currElemType != 'inline') 
 							{
 								while(tempNode.firstChild)
 									newElement.appendChild(tempNode.firstChild);
@@ -1624,10 +1667,30 @@ class Texter
 
 
 			if (!(listTags.includes(beginBlockNode.nodeName) || generalTags.includes(beginBlockNode.nodeName)))
-				return console.log('New feature cant be implemented on custom feature');
+			{
+				while(!(listTags.includes(beginBlockNode.nodeName) || generalTags.includes(beginBlockNode.nodeName) || beginBlockNode == endBlockNode))
+					beginBlockNode = beginBlockNode.nextSibling;
+			}
 
 			if (!(listTags.includes(endBlockNode.nodeName) || generalTags.includes(endBlockNode.nodeName)))
-				return console.log('New feature cant be implemented on custom feature');
+			{
+				while(!(listTags.includes(endBlockNode.nodeName) || generalTags.includes(endBlockNode.nodeName) || endBlockNode == beginBlockNode))
+					endBlockNode = endBlockNode.previousSibling;
+			}
+
+
+			if (beginBlockNode == endBlockNode) 
+			{
+				let newElement = document.createElement(featureTag);
+
+				while(beginBlockNode.firstChild)
+					newElement.appendChild(beginBlockNode.firstChild);
+
+				beginBlockNode.parentElement.replaceChild(newElement, beginBlockNode);
+
+				return;
+			}
+
 
 
 			// Un-nest begin block element if LI
@@ -2119,6 +2182,7 @@ class Texter
 		let tableCols = demoTable.querySelectorAll('td');
 
 		tableCols.forEach(col => {
+
 			col.addEventListener('mouseover', evt => {	
 				let tr = col.parentElement
 				let tdIndex = tr.childNodes.indexOf(col);
@@ -2167,7 +2231,11 @@ class Texter
 				let currNode = lastSelectionRange.endContainer;
 				let mainBlockNode = this.mainElement(currNode, this.#textEditorConfig.elementType.block);
 
+				let newP = document.createElement('p');
+				newP.appendChild(document.createElement('br'));
+
 				mainBlockNode.insertAdjacentElement('afterend', newTable);
+				newTable.insertAdjacentElement('afterend', newP);
 
 				newTable.querySelectorAll('td, th').forEach(cell => {
 					cell.addEventListener('click', evt => {
