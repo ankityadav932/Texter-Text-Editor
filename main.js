@@ -363,7 +363,8 @@ class Texter
 
 		this.#texterEditor.classList.add('texter-text-editor');
 		this.#texterEditor.setAttribute('contenteditable', 'true');
-		this.#texterEditor.setAttribute('autofocus', 'true');
+		this.#texterEditor.setAttribute('placeholder', 'Type something here ...');
+		// this.#texterEditor.setAttribute('autofocus', 'true');
 		this.#texterEditor.style.height = this.userConfig.config.height;
 
 

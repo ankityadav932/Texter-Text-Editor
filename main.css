@@ -8,7 +8,8 @@
 }
 
 /* General classes */
-.hide { display:none; }
+.hide { display:none; }	
+
 
 /* Container */
 div.texter {
@@ -18,6 +19,8 @@ div.texter {
     position: relative;
 	min-width: 200px;
 	height: auto;
+	background-color: #fff;
+	overflow: hidden;
 }
 
 
@@ -139,6 +142,13 @@ div.texter > div.texter-text-editor::-webkit-scrollbar-thumb {
 
 div.texter-text-editor > p {
 	margin-block: 1px;
+}
+
+/* Placeholder css */	
+
+div.texter-text-editor:empty:not(:focus):before{
+  content:"Type something here ...";
+  color:grey;
 }
 
 /* Image Options */

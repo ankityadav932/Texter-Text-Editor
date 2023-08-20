@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Texter (Text Editor)</title>
+	<link rel="stylesheet" href="main.css">
+	<style>
+		body {
+			box-sizing: border-box;
+			padding: 0;
+			margin: 0;
+			background-color: powderblue;
+		}
+
+
+
+		header {
+		    position: relative;
+		    background-color: dodgerblue;
+		    margin: 0;
+		    overflow: hidden;
+		    padding: 20px;
+		    color: #fff;
+		    font-family: sans-serif;
+		}
+
+		header > span > a {
+			text-decoration: none;
+			color: orange;
+			font-weight: bold;
+		}
+
+		header > span > a:hover {
+			text-decoration: underline;
+		}
+
+		header > h1 {
+			display: inline;
+		}
+
+		section {
+			padding: 30px 0;
+		}	
+
+		.comboBox {
+		    margin: 5% auto;
+		    padding: 5px;
+		    width: 50%;
+		    height: 100px;
+		}
+	</style>
+</head>
+<body>	
+<header>
+	<h1>Texter</h1>
+	<span>by <a href="#">Ankit Yadav</a></span>
+</header>
+<section>	
+	<textarea id="txt" rows="10"></textarea>
+</section>
+<script src="main.min.js"></script>
+<!-- <script src="main.js"></script> -->
+<script type="application/javascript">
+document.querySelector('#txt').texter({
+	width : '90%',	
+	height : '65vh',
+	customClass : 'my-editor'
+});
+
+</script>
+</body>
+</html>
