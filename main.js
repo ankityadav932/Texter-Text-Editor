@@ -1097,28 +1097,7 @@ class Texter
 							let tempNode = currElement;
 							currElement = currElement.nextSibling;
 
-							if (tempNode.properText() && tempNode.properText().length)
-							{
-								let elemType = this.getElementType(tempNode);
-								newElement = document.createElement(elementTag);
-
-								if (elemType == 'inline') 
-								{
-									let tempNodeClone = tempNode.cloneNode(true);
-									newElement.appendChild(tempNodeClone);
-
-									currElemParent.replaceChild(newElement, tempNode);
-								}
-								else
-								{
-									while(tempNode.firstChild)
-										newElement.appendChild(tempNode.firstChild);
-
-									tempNode.appendChild(newElement);
-								}
-							}
-							else
-								tempNode.parentElement.removeChild(tempNode);
+							this.setInlineTagInNode(tempNode, elementTag);
 						}
 
 						currElement = currElemParent;
@@ -1156,28 +1135,7 @@ class Texter
 							let tempNode = currElement;
 							currElement = currElement.previousSibling;
 
-							if (tempNode.properText() && tempNode.properText().length)
-							{
-								newElement = document.createElement(elementTag);
-								let elemType = this.getElementType(tempNode);
-
-								if (elemType == 'inline') 
-								{
-									let tempNodeClone = tempNode.cloneNode(true);
-									newElement.appendChild(tempNodeClone);
-
-									currElemParent.replaceChild(newElement, tempNode);
-								}
-								else
-								{
-									while(tempNode.firstChild)
-										newElement.appendChild(tempNode.firstChild);
-
-									tempNode.appendChild(newElement);
-								}
-							}
-							else
-								tempNode.parentElement.removeChild(tempNode);
+							this.setInlineTagInNode(tempNode, elementTag);
 						}
 
 						currElement = currElemParent;
@@ -1196,45 +1154,59 @@ class Texter
 						let tempNode = currElement;
 						currElement = currElement.nextSibling;
 
-						if (tempNode.nodeType == 1) 
-						{
-							let currElemType = this.getElementType(tempNode);
-							newElement = document.createElement(elementTag);
-
-							if (currElemType != 'inline') 
-							{
-								while(tempNode.firstChild)
-									newElement.appendChild(tempNode.firstChild);
-
-								tempNode.appendChild(newElement);		
-							}
-							else if (currElemType == 'inline')
-							{	
-								let tempParentElement = tempNode.parentElement;
-
-								newElement.appendChild(tempNode.cloneNode(true));
-								tempParentElement.replaceChild(newElement, tempNode);
-							}
-							else console.error('DOM element display type is out of config - ' + currElemType);
-						}
-						else if (tempNode.nodeType == 3)
-						{
-							if (tempNode && tempNode.properText().length) 
-							{
-								let tempNodeParent = tempNode.parentElement;
-								newElement = document.createElement(elementTag);
-								
-								newElement.appendChild(tempNode.cloneNode(true));
-								tempNodeParent.replaceChild(newElement, tempNode);
-							}
-						}
-						else console.error('DOM node type is out of config - ' + tempNode.nodeType);
+						this.setInlineTagInNode(tempNode, elementTag);
 					}
 				}	
 
 				this.setCaretPosition(focusElement.firstChild, 0);		
 			}
 		}
+	}
+
+
+	/**
+	 * @function : setInlineTagInNode
+	 * @purpose : insert the requested tag into given element
+	 * ======================================================*/
+
+	setInlineTagInNode = (node, tag) =>
+	{
+		if (!(node.properText() && node.properText().length))
+			return node.parentElement.removeChild(node);
+
+		if (node.nodeType == 1) 
+		{
+			let currElemType = this.getElementType(node);
+			let newElement = document.createElement(tag);
+
+			if (currElemType != 'inline') 
+			{
+				while(node.firstChild)
+					newElement.appendChild(node.firstChild);
+
+				node.appendChild(newElement);		
+			}
+			else if (currElemType == 'inline')
+			{	
+				let tempParentElement = node.parentElement;
+
+				newElement.appendChild(node.cloneNode(true));
+				tempParentElement.replaceChild(newElement, node);
+			}
+			else console.error('DOM element display type is out of config - ' + currElemType);
+		}
+		else if (node.nodeType == 3)
+		{
+			if (node && node.properText().length) 
+			{
+				let nodeParent = node.parentElement;
+				let newElement = document.createElement(tag);
+				
+				newElement.appendChild(node.cloneNode(true));
+				nodeParent.replaceChild(newElement, node);
+			}
+		}
+		else console.error('DOM node type is out of config - ' + node.nodeType);		
 	}
 
 
